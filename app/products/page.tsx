@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Search, Filter, ShoppingCart, Star, Heart, Eye, Grid, List, ChevronLeft, ChevronRight, Sparkles, Package, Zap, Home } from 'lucide-react';
-import { MinimalPilly } from '@/components/MinimalPilly';
+import { Pilly } from '@/components/pilly';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 
@@ -485,10 +485,13 @@ export default function CustomerProducts() {
           </div>
           <div className="flex-1 flex justify-center items-center relative perspective-[1000px] h-64 md:h-auto min-h-[300px]">
              <div className="absolute inset-0 bg-sky-400/20 blur-[100px] rounded-full translate-y-10 scale-110"></div>
-             <div className="relative drop-shadow-[0_20px_50px_rgba(14,165,233,0.3)] transition-transform duration-700 flex items-center justify-center">
-               <MinimalPilly 
-                className="drop-shadow-xl animate-float"
-              />
+             <div className="relative drop-shadow-[0_20px_50px_rgba(14,165,233,0.3)] transition-transform duration-700 flex items-center justify-center shrink-0">
+               <Pilly 
+                 expression="doctor" 
+                 size={320} 
+                 bubble="Ready to restock your pharmacy?" 
+                 className="relative z-20 shrink-0"
+               />
              </div>
           </div>
         </div>
@@ -605,9 +608,24 @@ export default function CustomerProducts() {
       </div>
 
       {/* Products Grid/List */}
-      {searchTerm || selectedCategory !== 'all' || priceRange[0] > 0 || priceRange[1] < 1000 || sortBy !== 'featured' ? (
-        <div className="flex justify-center mb-8">
-            <Button
+      {filteredProducts.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-24 px-6 text-center animate-in fade-in slide-in-from-bottom-4 duration-700 bg-white border border-slate-100/50 rounded-[3rem] shadow-sm max-w-3xl mx-auto my-8">
+          <div className="relative mb-8">
+            <div className="absolute inset-0 bg-sky-200/50 blur-[80px] rounded-full scale-150"></div>
+            <div className="relative drop-shadow-xl animate-float">
+              <Pilly 
+                expression="confused" 
+                size={220} 
+                bubble="Hmm... I can't find that medicine." 
+              />
+            </div>
+          </div>
+          <h3 className="text-3xl font-bold text-slate-800 mb-4 tracking-tight">No Products Found</h3>
+          <p className="text-slate-500 max-w-md mx-auto mb-10 text-lg leading-relaxed">
+            We couldn't find any products matching <span className="font-semibold text-slate-700">"{searchTerm}"</span>. 
+            Try adjusting your filters or search for something else!
+          </p>
+          <Button
             size="lg"
             className="h-14 px-8 rounded-2xl bg-sky-50 text-sky-600 hover:bg-sky-100 hover:text-sky-700 transition-all active:scale-95 shadow-sm font-bold border-2 border-sky-100"
             onClick={() => {
@@ -619,7 +637,7 @@ export default function CustomerProducts() {
           >
             Clear All Filters
           </Button>
-          </div>
+        </div>
       ) : (
         <div className={
           viewMode === 'grid'

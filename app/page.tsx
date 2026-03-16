@@ -136,7 +136,7 @@ export default function Home() {
                     <Button variant="outline" className="rounded-full shadow-sm hover:shadow-md transition-all border-primary/20 hover:bg-primary/5 hover:text-primary">Admin Dashboard</Button>
                   </Link>
                 ) : (
-                  <Link href="/dashboard">
+                  <Link href="/customer/dashboard">
                     <Button variant="outline" className="rounded-full shadow-sm hover:shadow-md transition-all border-primary/20 hover:bg-primary/5 hover:text-primary">My Dashboard</Button>
                   </Link>
                 )}
