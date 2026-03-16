@@ -6,10 +6,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
+import { createClient } from '@/lib/supabase/client';
+import { EnhancedNotifications } from '@/components/enhanced-notifications';
 import { User, Mail, Phone, Camera, Shield, Key, Bell, Globe } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 
 export default function CustomerAccount() {
   const [user, setUser] = useState<any>(null);
@@ -379,35 +386,7 @@ export default function CustomerAccount() {
         </TabsContent>
 
         <TabsContent value="notifications">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bell className="w-5 h-5" />
-                Notification Preferences
-              </CardTitle>
-              <CardDescription>
-                Choose how you want to be notified about your account activity
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-4 space-y-4">
-              <div className="space-y-4">
-                {[
-                  { label: 'Email notifications for orders', description: 'Get notified about order updates' },
-                  { label: 'Marketing emails', description: 'Receive promotional offers and newsletters' },
-                  { label: 'Security alerts', description: 'Important security notifications' },
-                  { label: 'Product updates', description: 'New products and feature announcements' }
-                ].map((item, index) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">{item.label}</p>
-                      <p className="text-sm text-gray-600">{item.description}</p>
-                    </div>
-                    <input type="checkbox" className="w-4 h-4" defaultChecked={index < 3} />
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <EnhancedNotifications />
         </TabsContent>
 
         <TabsContent value="preferences">
@@ -421,42 +400,109 @@ export default function CustomerAccount() {
                 Customize your experience and regional settings
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-4 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="language">Language</Label>
-                  <select id="language" className="w-full p-2 border border-gray-300 rounded-lg">
-                    <option>English</option>
-                    <option>Spanish</option>
-                    <option>French</option>
-                  </select>
-                </div>
-                <div>
-                  <Label htmlFor="timezone">Timezone</Label>
-                  <select id="timezone" className="w-full p-2 border border-gray-300 rounded-lg">
-                    <option>UTC-5 (Eastern Time)</option>
-                    <option>UTC-6 (Central Time)</option>
-                    <option>UTC-7 (Mountain Time)</option>
-                    <option>UTC-8 (Pacific Time)</option>
-                  </select>
+            <CardContent className="p-4 space-y-6">
+              {/* Language Settings */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                  <Globe className="w-5 h-5" />
+                  Language & Region
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="language">Display Language</Label>
+                    <Select>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select language" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="en">English</SelectItem>
+                        <SelectItem value="es">Español</SelectItem>
+                        <SelectItem value="fr">Français</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="timezone">Timezone</Label>
+                    <Select>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select timezone" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="UTC-5">Eastern Time (UTC-5)</SelectItem>
+                        <SelectItem value="UTC-6">Central Time (UTC-6)</SelectItem>
+                        <SelectItem value="UTC-7">Mountain Time (UTC-7)</SelectItem>
+                        <SelectItem value="UTC-8">Pacific Time (UTC-8)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
-              
-              <div className="space-y-2">
-                <Label>Theme</Label>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2">
-                    <input type="radio" name="theme" defaultChecked />
-                    <span>Light</span>
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input type="radio" name="theme" />
-                    <span>Dark</span>
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input type="radio" name="theme" />
-                    <span>System</span>
-                  </label>
+
+              {/* Theme Settings */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                  <div className="w-5 h-5 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white mr-3">
+                    <span className="text-sm font-medium">🎨</span>
+                  </div>
+                  Theme
+                </h3>
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { name: 'light', label: 'Light', icon: '☀️' },
+                    { name: 'dark', label: 'Dark', icon: '🌙' },
+                    { name: 'system', label: 'System', icon: '💻' }
+                  ].map((theme) => (
+                    <label key={theme.name} className="relative cursor-pointer">
+                      <input
+                        type="radio"
+                        name="theme"
+                        value={theme.name}
+                        className="sr-only absolute inset-0"
+                      />
+                      <div className={`flex items-center justify-center w-full p-4 rounded-lg border-2 transition-all ${
+                        theme.name === 'light' ? 'bg-white hover:bg-gray-50 border-gray-200' :
+                        theme.name === 'dark' ? 'bg-gray-800 hover:bg-gray-700 border-gray-600' :
+                        'bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 to-gray-700 border-gray-600'
+                      }`}>
+                        <span className="text-2xl mr-3">{theme.icon}</span>
+                        <span className="font-medium">{theme.label}</span>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Advanced Settings */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold mb-3">Advanced Settings</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="font-medium">Data Export</p>
+                      <p className="text-sm text-gray-600">Download all your data in JSON format</p>
+                    </div>
+                    <Button variant="outline" size="sm">
+                      Export Data
+                    </Button>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="font-medium">Privacy Settings</p>
+                      <p className="text-sm text-gray-600">Control your data and privacy</p>
+                    </div>
+                    <Button variant="outline" size="sm">
+                      Privacy Settings
+                    </Button>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+                    <div>
+                      <p className="font-medium text-red-800">Delete Account</p>
+                      <p className="text-sm text-red-600">Permanently delete your account and data</p>
+                    </div>
+                    <Button variant="destructive" size="sm">
+                      Delete Account
+                    </Button>
+                  </div>
                 </div>
               </div>
             </CardContent>
