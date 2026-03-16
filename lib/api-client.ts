@@ -104,6 +104,24 @@ class ApiClient {
     }
   }
 
+  async updatePasswordWithCode(code: string, newPassword: string) {
+    try {
+      // First exchange the code for a session
+      const { error: exchangeError } = await this.supabase.auth.exchangeCodeForSession(code);
+      if (exchangeError) throw exchangeError;
+
+      // Then update the password
+      const { error: updateError } = await this.supabase.auth.updateUser({ 
+        password: newPassword 
+      });
+      if (updateError) throw updateError;
+
+      return { error: null };
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : 'Password reset failed' };
+    }
+  }
+
   // Products
   async getProducts(categoryId?: string, limit = 50) {
     try {

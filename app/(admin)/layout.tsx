@@ -64,9 +64,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin/products', label: 'Products', icon: Package },
     { href: '/admin/orders', label: 'Orders', icon: ShoppingCart },
     { href: '/admin/customers', label: 'Customers', icon: Users },
-    { href: '/admin/analytics', label: 'Analytics', icon: TrendingUp },
-    { href: '/admin/settings', label: 'Settings', icon: Settings },
     { href: '/admin/emails', label: 'Emails', icon: Menu },
+    { href: '/admin/settings', label: 'Settings', icon: Settings },
   ];
 
   const handleSignOut = async () => {

@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { createClient } from '@/lib/supabase/client';
 import { EnhancedNotifications } from '@/components/enhanced-notifications';
 import { User, Mail, Phone, Camera, Shield, Key, Bell, Globe } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';

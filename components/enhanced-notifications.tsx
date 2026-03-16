@@ -322,7 +322,6 @@ export function EnhancedNotifications() {
                         </div>
                       )}
                     </div>
-                    </div>
                   </div>
                 ))}
             </div>

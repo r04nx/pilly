@@ -59,7 +59,12 @@ export interface Order {
   created_at: string;
   updated_at: string;
   cancelled_at?: string;
+  users?: {
+    email: string;
+  };
 }
+
+export type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
 
 export interface SupportTicket {
   id: string;
