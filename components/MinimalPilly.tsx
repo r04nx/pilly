@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Pilly } from './pilly';
 
 interface MinimalPillyProps {
   className?: string;
@@ -96,9 +95,11 @@ export function MinimalPilly({ className }: MinimalPillyProps) {
       onMouseDown={handleMouseDown}
       onClick={handleClick}
     >
-      <Pilly 
-        expression={expression as any} 
-        size={80}
+      <img 
+        src={`/companion/pilly-${expression}.png`}
+        alt={`Pilly ${expression}`}
+        width={80}
+        height={80}
         className="transition-all duration-300"
       />
     </div>

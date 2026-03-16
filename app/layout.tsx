@@ -45,8 +45,7 @@ export default function RootLayout({
     <html lang="en" className={`${_poppins.variable} ${_ibmPlexSans.variable}`}>
       <body className="font-sans antialiased bg-background text-foreground">
         {children}
-        <MinimalPilly />
-        <Analytics />
+                <Analytics />
       </body>
     </html>
   )
