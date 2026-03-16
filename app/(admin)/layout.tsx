@@ -162,9 +162,54 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <main className="flex-1 lg:ml-64">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             {isLoading ? (
-              <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-300"></div>
-                <p className="mt-4 text-gray-600">Loading...</p>
+              <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+                <div className="text-center max-w-md">
+                  {/* Pilly Animation */}
+                  <div className="relative mb-6">
+                    <div className="inline-block relative">
+                      <img
+                        src="/companion/pilly-thinking.png"
+                        alt="Pilly thinking"
+                        className="w-24 h-24 mx-auto animate-pulse"
+                      />
+                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full animate-ping" />
+                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full" />
+                    </div>
+                  </div>
+
+                  {/* Loading Text */}
+                  <h3 className="text-xl font-bold text-gray-800 mb-2">
+                    Pilly is setting things up...
+                  </h3>
+                  
+                  <p className="text-gray-600 text-sm mb-4">
+                    Verifying your access and preparing the admin panel
+                  </p>
+
+                  {/* Simple Progress */}
+                  <div className="flex justify-center gap-1">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" />
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                  </div>
+
+                  {/* Pilly Quote */}
+                  <div className="mt-6 p-3 bg-white/50 backdrop-blur-sm rounded-lg border border-blue-100">
+                    <p className="text-xs text-blue-600 italic">
+                      "Admin access verification in progress... Please wait a moment!" 
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">- Pilly</p>
+                  </div>
+                </div>
+
+                {/* Background Decorations */}
+                <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                  <div className="absolute top-10 left-10 w-16 h-16 bg-blue-200 rounded-full opacity-20 animate-pulse" />
+                  <div className="absolute top-20 right-20 w-12 h-12 bg-indigo-200 rounded-full opacity-20 animate-pulse" 
+                       style={{ animationDelay: '1s' }} />
+                  <div className="absolute bottom-20 left-20 w-20 h-20 bg-purple-200 rounded-full opacity-20 animate-pulse" 
+                       style={{ animationDelay: '2s' }} />
+                </div>
               </div>
             ) : (
               children

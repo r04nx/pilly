@@ -241,14 +241,62 @@ export default function CustomerDashboard() {
 
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-32 bg-gray-200 rounded"></div>
-            ))}
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 flex items-center justify-center p-6">
+        <div className="text-center max-w-md">
+          {/* Pilly Animation */}
+          <div className="relative mb-6">
+            <div className="inline-block relative">
+              <img
+                src="/companion/pilly-excited.png"
+                alt="Pilly excited"
+                className="w-28 h-28 mx-auto animate-bounce"
+              />
+              <div className="absolute -top-2 -right-2 w-5 h-5 bg-purple-500 rounded-full animate-ping" />
+              <div className="absolute -top-2 -right-2 w-5 h-5 bg-purple-500 rounded-full" />
+            </div>
           </div>
+
+          {/* Loading Text */}
+          <h3 className="text-xl font-bold text-gray-800 mb-2">
+            Pilly is preparing your dashboard...
+          </h3>
+          
+          <p className="text-gray-600 text-sm mb-4">
+            Gathering your orders, recommendations, and account information
+          </p>
+
+          {/* Simple Progress */}
+          <div className="flex justify-center gap-1 mb-4">
+            <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" />
+            <div className="w-2 h-2 bg-pink-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+            <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+          </div>
+
+          {/* Loading Messages */}
+          <div className="space-y-1 text-xs text-gray-500 mb-4">
+            <div className="animate-pulse">Loading your recent orders...</div>
+            <div className="animate-pulse" style={{ animationDelay: '0.5s' }}>Finding personalized recommendations...</div>
+            <div className="animate-pulse" style={{ animationDelay: '1s' }}>Calculating loyalty points...</div>
+          </div>
+
+          {/* Pilly Quote */}
+          <div className="p-3 bg-white/50 backdrop-blur-sm rounded-lg border border-purple-100">
+            <p className="text-xs text-purple-600 italic">
+              "Your customer dashboard will be ready in just a moment!" 
+            </p>
+            <p className="text-xs text-gray-500 mt-1">- Pilly</p>
+          </div>
+        </div>
+
+        {/* Background Decorations */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-10 left-10 w-16 h-16 bg-purple-200 rounded-full opacity-20 animate-pulse" />
+          <div className="absolute top-20 right-20 w-12 h-12 bg-pink-200 rounded-full opacity-20 animate-pulse" 
+               style={{ animationDelay: '1s' }} />
+          <div className="absolute bottom-20 left-20 w-20 h-20 bg-purple-200 rounded-full opacity-20 animate-pulse" 
+               style={{ animationDelay: '2s' }} />
+          <div className="absolute bottom-10 right-10 w-14 h-14 bg-pink-200 rounded-full opacity-20 animate-pulse" 
+               style={{ animationDelay: '0.5s' }} />
         </div>
       </div>
     );

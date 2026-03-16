@@ -170,11 +170,85 @@ export default function AdminDashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="p-8">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
-          <p className="mt-4 text-muted-foreground">Loading dashboard...</p>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-8">
+        <div className="text-center max-w-md">
+          {/* Pilly Animation */}
+          <div className="relative mb-8">
+            <div className="inline-block relative">
+              <img
+                src="/companion/pilly-running.png"
+                alt="Pilly working"
+                className="w-32 h-32 mx-auto animate-bounce"
+              />
+              <div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-500 rounded-full animate-ping" />
+              <div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-500 rounded-full" />
+            </div>
+          </div>
+
+          {/* Loading Text */}
+          <h2 className="text-2xl font-bold text-gray-800 mb-3">
+            Pilly is preparing your dashboard...
+          </h2>
+          
+          <p className="text-gray-600 mb-6">
+            Gathering metrics, analyzing data, and making everything perfect for you!
+          </p>
+
+          {/* Progress Bar */}
+          <div className="mb-6">
+            <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+              <div className="bg-gradient-to-r from-blue-500 to-indigo-600 h-2 rounded-full animate-pulse" 
+                   style={{
+                     animation: 'loading 2s ease-in-out infinite',
+                     width: '70%'
+                   }} />
+            </div>
+          </div>
+
+          {/* Loading Messages */}
+          <div className="space-y-2 text-sm text-gray-500">
+            <div className="flex items-center justify-center gap-2 animate-pulse">
+              <div className="w-2 h-2 bg-blue-500 rounded-full" />
+              <span>Loading sales metrics...</span>
+            </div>
+            <div className="flex items-center justify-center gap-2 animate-pulse" style={{ animationDelay: '0.5s' }}>
+              <div className="w-2 h-2 bg-indigo-500 rounded-full" />
+              <span>Analyzing customer data...</span>
+            </div>
+            <div className="flex items-center justify-center gap-2 animate-pulse" style={{ animationDelay: '1s' }}>
+              <div className="w-2 h-2 bg-purple-500 rounded-full" />
+              <span>Checking inventory levels...</span>
+            </div>
+          </div>
+
+          {/* Pilly Quote */}
+          <div className="mt-8 p-4 bg-white/50 backdrop-blur-sm rounded-lg border border-blue-100">
+            <p className="text-xs text-blue-600 italic">
+              "Great things take time! Your dashboard will be ready in just a moment." 
+            </p>
+            <p className="text-xs text-gray-500 mt-1">- Pilly</p>
+          </div>
         </div>
+
+        {/* Background Decorations */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-10 left-10 w-20 h-20 bg-blue-200 rounded-full opacity-20 animate-pulse" />
+          <div className="absolute top-20 right-20 w-16 h-16 bg-indigo-200 rounded-full opacity-20 animate-pulse" 
+               style={{ animationDelay: '1s' }} />
+          <div className="absolute bottom-20 left-20 w-24 h-24 bg-purple-200 rounded-full opacity-20 animate-pulse" 
+               style={{ animationDelay: '2s' }} />
+          <div className="absolute bottom-10 right-10 w-12 h-12 bg-pink-200 rounded-full opacity-20 animate-pulse" 
+               style={{ animationDelay: '0.5s' }} />
+        </div>
+
+        {/* CSS Animation */}
+        <style jsx>{`
+          @keyframes loading {
+            0% { transform: translateX(-100%); }
+            50% { transform: translateX(0); }
+            100% { transform: translateX(100%); }
+          }
+        `}</style>
       </div>
     );
   }
