@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Poppins, IBM_Plex_Sans } from 'next/font/google'
+import { MinimalPilly } from '@/components/MinimalPilly'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
@@ -34,7 +35,6 @@ export const metadata: Metadata = {
   },
 }
 
-import { FloatingPilly } from '@/components/pilly'
 
 export default function RootLayout({
   children,
@@ -45,7 +45,7 @@ export default function RootLayout({
     <html lang="en" className={`${_poppins.variable} ${_ibmPlexSans.variable}`}>
       <body className="font-sans antialiased bg-background text-foreground">
         {children}
-        <FloatingPilly />
+        <MinimalPilly />
         <Analytics />
       </body>
     </html>

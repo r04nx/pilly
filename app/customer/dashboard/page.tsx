@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Pilly } from '@/components/pilly';
+import { MinimalPilly } from '@/components/MinimalPilly';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -258,7 +258,7 @@ export default function CustomerDashboard() {
     <div className="p-6 max-w-7xl mx-auto">
       {/* Welcome Header */}
       <div className="mb-8 flex flex-col md:flex-row items-center gap-6 bg-gradient-to-r from-sky-50 to-transparent p-6 rounded-2xl border border-sky-100/50">
-        <Pilly expression="doctor" size={100} bubble={`Hi ${user?.user_metadata?.full_name?.split(' ')[0] || 'there'}!`} />
+        <MinimalPilly className="mb-4" />
         <div>
           <h1 className="text-3xl font-bold mb-2 text-sky-900 text-center md:text-left">Welcome back, {user?.user_metadata?.full_name || 'Customer'}!</h1>
           <p className="text-sky-700/70 text-center md:text-left">I've prepared your pharmacy dashboard summary for today.</p>
@@ -340,10 +340,14 @@ export default function CustomerDashboard() {
             <CardContent>
               {recentOrders.length === 0 ? (
                 <div className="text-center py-12">
-                  <Pilly expression="sad" size={120} className="mb-4 opacity-50 grayscale-[0.5]" />
+                  <div className="mb-4 opacity-50">
+                    <div className="w-32 h-32 bg-gray-200 rounded-full flex items-center justify-center">
+                      <span className="text-4xl">📦</span>
+                    </div>
+                  </div>
                   <p className="text-gray-600 mb-6 font-medium">You haven't placed any orders yet.</p>
                   <Button onClick={() => window.location.href = '/customer/products'}>
-                    Start Shopping with Pilly
+                    Start Shopping
                   </Button>
                 </div>
               ) : (
@@ -434,7 +438,9 @@ export default function CustomerDashboard() {
                 Loyalty Program
               </CardTitle>
               <div className="flex justify-center -mb-4">
-                <Pilly expression="excited" size={80} />
+                <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center">
+                    <span className="text-2xl">⭐</span>
+                  </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">

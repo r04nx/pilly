@@ -52,7 +52,7 @@ export default function LoginPage() {
         throw new Error(signInError);
       }
 
-      router.push('/dashboard');
+      router.push('/customer/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred during sign in');
     } finally {
