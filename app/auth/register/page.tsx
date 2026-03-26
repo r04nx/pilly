@@ -80,10 +80,14 @@ export default function RegisterPage() {
           {/* Header */}
           <div className="mb-8 text-center">
             <div className="mb-4">
-              <Pilly expression="excited" size={100} bubble="Join our family!" />
+              <img 
+                src="https://flem.xo.je/uploads/brand-logo_2e73a483.png" 
+                alt="Paras Logo" 
+                className="h-16 object-contain mx-auto drop-shadow-sm hover:scale-110 transition-transform duration-300" 
+              />
             </div>
             <h1 className="text-2xl font-bold text-foreground">Create Account</h1>
-            <p className="text-sm text-muted-foreground mt-2">Join Paras Pharmacy Supplier today</p>
+            <p className="text-sm text-sky-600 font-semibold mt-2">Join Paras Pharmacy Supplier</p>
           </div>
 
           {/* Error Message */}

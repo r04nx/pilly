@@ -23,7 +23,19 @@ export async function GET(request: Request) {
     }
 
     if (!error) {
-      // If we successfully authenticated, redirect to next (dashboard)
+      // If we successfully authenticated, check for admin status to determine the best default redirect
+      if (next === '/') {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('is_admin')
+          .single();
+        
+        const { data: { user } } = await supabase.auth.getUser();
+        const isAdmin = profile?.is_admin || user?.user_metadata?.is_admin === true;
+        
+        return NextResponse.redirect(`${baseUrl}${isAdmin ? '/admin/dashboard' : '/products'}`)
+      }
+      
       return NextResponse.redirect(`${baseUrl}${next}`)
     } else {
       // If we couldn't authenticate (PKCE error), redirect to login with a verified=true success param

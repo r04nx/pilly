@@ -3,6 +3,11 @@ import { createClient } from '@/lib/supabase/client';
 class ApiClient {
   private supabase = createClient();
 
+  // Expose supabase client for direct access when needed
+  get supabaseClient() {
+    return this.supabase;
+  }
+
   // Auth
   async signUpWithEmail(email: string, password: string, fullName: string) {
     try {
@@ -84,7 +89,7 @@ class ApiClient {
   async resetPassword(email: string) {
     try {
       const { error } = await this.supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/reset-password`,
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=/auth/reset-password`,
       });
 
       if (error) throw error;
@@ -119,6 +124,23 @@ class ApiClient {
       return { error: null };
     } catch (error) {
       return { error: error instanceof Error ? error.message : 'Password reset failed' };
+    }
+  }
+
+  async inviteUser(email: string, fullName: string) {
+    try {
+      const response = await fetch('/api/admin/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, fullName }),
+      });
+      
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Invitation failed');
+      
+      return { success: true, error: null };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to send invitation' };
     }
   }
 

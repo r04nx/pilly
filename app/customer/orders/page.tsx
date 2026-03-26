@@ -8,19 +8,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { 
-  Package, 
-  Truck, 
-  CheckCircle, 
-  Clock, 
-  XCircle, 
-  ArrowRight, 
-  Eye, 
+import {
+  Package,
+  Truck,
+  CheckCircle,
+  Clock,
+  XCircle,
+  ArrowRight,
+  Eye,
   Download,
   Filter,
   Search,
   Calendar,
-  DollarSign
+  DollarSign,
+  ShoppingBag,
+  ShoppingCart,
+  MapPin,
+  CreditCard,
+  RefreshCw
 } from 'lucide-react';
 
 interface OrderItem {
@@ -36,27 +41,18 @@ interface OrderItem {
 interface Order {
   id: string;
   order_number: string;
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'refunded';
+  status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   total_amount: number;
-  shipping_address: {
-    street: string;
-    city: string;
-    state: string;
-    zip_code: string;
-    country: string;
-  };
-  billing_address: {
-    street: string;
-    city: string;
-    state: string;
-    zip_code: string;
-    country: string;
-  };
+  shipping_amount: number;
+  tax_amount: number;
+  shipping_address: any;
+  billing_address: any;
+  payment_method: string;
   tracking_number?: string;
   estimated_delivery?: string;
   created_at: string;
   updated_at: string;
-  items: OrderItem[];
+  order_items: any[];
 }
 
 export default function CustomerOrders() {
@@ -68,16 +64,19 @@ export default function CustomerOrders() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
   const [showOrderDetails, setShowOrderDetails] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
 
   const supabase = createClient();
 
   const statusConfig = {
-    pending: { label: 'Pending', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
-    processing: { label: 'Processing', color: 'bg-blue-100 text-blue-800', icon: Package },
+    pending: { label: 'Pending', color: 'bg-amber-100 text-amber-800', icon: Clock },
+    confirmed: { label: 'Confirmed', color: 'bg-blue-100 text-blue-800', icon: CheckCircle },
+    processing: { label: 'Processing', color: 'bg-indigo-100 text-indigo-800', icon: Package },
     shipped: { label: 'Shipped', color: 'bg-purple-100 text-purple-800', icon: Truck },
-    delivered: { label: 'Delivered', color: 'bg-green-100 text-green-800', icon: CheckCircle },
-    cancelled: { label: 'Cancelled', color: 'bg-red-100 text-red-800', icon: XCircle },
-    refunded: { label: 'Refunded', color: 'bg-gray-100 text-gray-800', icon: DollarSign }
+    delivered: { label: 'Delivered', color: 'bg-emerald-100 text-emerald-800', icon: CheckCircle },
+    cancelled: { label: 'Cancelled', color: 'bg-rose-100 text-rose-800', icon: XCircle },
+    refunded: { label: 'Refunded', color: 'bg-gray-100 text-gray-800', icon: RefreshCw },
   };
 
   useEffect(() => {
@@ -92,162 +91,21 @@ export default function CustomerOrders() {
             *,
             order_items (
               *,
-              products (*)
+              products (
+                name,
+                image_url
+              )
             )
           `)
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
 
         if (error) throw error;
-
-        // Transform data to match our interface
-        const transformedOrders: Order[] = (data || []).map(order => ({
-          id: order.id,
-          order_number: order.order_number,
-          status: order.status,
-          total_amount: order.total_amount,
-          shipping_address: order.shipping_address,
-          billing_address: order.billing_address,
-          tracking_number: order.tracking_number,
-          estimated_delivery: order.estimated_delivery,
-          created_at: order.created_at,
-          updated_at: order.updated_at,
-          items: order.order_items.map((item: any) => ({
-            id: item.id,
-            product_id: item.product_id,
-            product_name: item.products?.name || 'Product',
-            product_image: item.products?.image_url || 'https://picsum.photos/seed/product/100/100',
-            quantity: item.quantity,
-            price: item.price,
-            variant: item.variant
-          }))
-        }));
-
-        setOrders(transformedOrders);
-        setFilteredOrders(transformedOrders);
+        setOrders(data || []);
+        setFilteredOrders(data || []);
       } catch (error) {
         console.error('Error fetching orders:', error);
-        // Mock data for demo
-        const mockOrders: Order[] = [
-          {
-            id: '1',
-            order_number: 'ORD-2024-001',
-            status: 'delivered',
-            total_amount: 329.98,
-            shipping_address: {
-              street: '123 Main St',
-              city: 'New York',
-              state: 'NY',
-              zip_code: '10001',
-              country: 'USA'
-            },
-            billing_address: {
-              street: '123 Main St',
-              city: 'New York',
-              state: 'NY',
-              zip_code: '10001',
-              country: 'USA'
-            },
-            tracking_number: '1Z999AA10123456784',
-            estimated_delivery: '2024-03-15',
-            created_at: '2024-03-10T10:00:00Z',
-            updated_at: '2024-03-15T14:30:00Z',
-            items: [
-              {
-                id: '1',
-                product_id: '1',
-                product_name: 'Wireless Headphones',
-                product_image: 'https://picsum.photos/seed/headphones/100/100',
-                quantity: 1,
-                price: 299.99
-              },
-              {
-                id: '2',
-                product_id: '2',
-                product_name: 'Phone Case',
-                product_image: 'https://picsum.photos/seed/phonecase/100/100',
-                quantity: 1,
-                price: 29.99
-              }
-            ]
-          },
-          {
-            id: '2',
-            order_number: 'ORD-2024-002',
-            status: 'shipped',
-            total_amount: 199.99,
-            shipping_address: {
-              street: '456 Oak Ave',
-              city: 'Los Angeles',
-              state: 'CA',
-              zip_code: '90001',
-              country: 'USA'
-            },
-            billing_address: {
-              street: '456 Oak Ave',
-              city: 'Los Angeles',
-              state: 'CA',
-              zip_code: '90001',
-              country: 'USA'
-            },
-            tracking_number: '1Z999AA10123456785',
-            estimated_delivery: '2024-03-20',
-            created_at: '2024-03-12T15:30:00Z',
-            updated_at: '2024-03-14T09:15:00Z',
-            items: [
-              {
-                id: '3',
-                product_id: '3',
-                product_name: 'Smart Watch',
-                product_image: 'https://picsum.photos/seed/smartwatch/100/100',
-                quantity: 1,
-                price: 199.99
-              }
-            ]
-          },
-          {
-            id: '3',
-            order_number: 'ORD-2024-003',
-            status: 'processing',
-            total_amount: 89.97,
-            shipping_address: {
-              street: '789 Pine Rd',
-              city: 'Chicago',
-              state: 'IL',
-              zip_code: '60007',
-              country: 'USA'
-            },
-            billing_address: {
-              street: '789 Pine Rd',
-              city: 'Chicago',
-              state: 'IL',
-              zip_code: '60007',
-              country: 'USA'
-            },
-            created_at: '2024-03-14T11:20:00Z',
-            updated_at: '2024-03-14T11:20:00Z',
-            items: [
-              {
-                id: '4',
-                product_id: '4',
-                product_name: 'Yoga Mat',
-                product_image: 'https://picsum.photos/seed/yogamat/100/100',
-                quantity: 2,
-                price: 39.99
-              },
-              {
-                id: '5',
-                product_id: '5',
-                product_name: 'Water Bottle',
-                product_image: 'https://picsum.photos/seed/bottle/100/100',
-                quantity: 1,
-                price: 9.99
-              }
-            ]
-          }
-        ];
-        setOrders(mockOrders);
-        setFilteredOrders(mockOrders);
+        setError('Failed to load orders. Please try again.');
       } finally {
         setLoading(false);
       }
@@ -262,8 +120,8 @@ export default function CustomerOrders() {
     // Filter by search term
     if (searchTerm) {
       filtered = filtered.filter(order =>
-        order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.items.some(item => item.product_name.toLowerCase().includes(searchTerm.toLowerCase()))
+        (order.order_number || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.order_items.some(item => (item.products?.name || '').toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
 
@@ -303,9 +161,9 @@ export default function CustomerOrders() {
   const getOrderStatusSteps = (status: string) => {
     const steps = [
       { key: 'pending', label: 'Order Placed', completed: true },
-      { key: 'processing', label: 'Processing', completed: ['processing', 'shipped', 'delivered'].includes(status) },
-      { key: 'shipped', label: 'Shipped', completed: ['shipped', 'delivered'].includes(status) },
-      { key: 'delivered', label: 'Delivered', completed: status === 'delivered' }
+      { key: 'processing', label: 'Processing', completed: ['processing', 'shipped', 'delivered', 'refunded'].includes(status) },
+      { key: 'shipped', label: 'Shipped', completed: ['shipped', 'delivered', 'refunded'].includes(status) },
+      { key: 'delivered', label: 'Delivered', completed: status === 'delivered' || status === 'refunded' }
     ];
     
     if (status === 'cancelled') {
@@ -313,7 +171,7 @@ export default function CustomerOrders() {
     }
     
     if (status === 'refunded') {
-      return steps.slice(0, 1).concat([{ key: 'refunded', label: 'Refunded', completed: true }]);
+      return steps.slice(0, 4).concat([{ key: 'refunded', label: 'Refunded', completed: true }]);
     }
     
     return steps;
@@ -322,6 +180,31 @@ export default function CustomerOrders() {
   const viewOrderDetails = (order: Order) => {
     setSelectedOrder(order);
     setShowOrderDetails(true);
+  };
+
+  const handleCancelOrder = async (orderId: string) => {
+    if (!confirm('Are you sure you want to cancel this order?')) return;
+    
+    setLoading(true);
+    try {
+      const resp = await fetch(`/api/customer/orders/\${orderId}/cancel`, {
+        method: 'POST'
+      });
+      const data = await resp.json();
+      
+      if (data.success) {
+        // Refresh local state
+        setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled' } : o));
+        alert('Order cancelled successfully.');
+      } else {
+        alert(data.error || 'Failed to cancel order');
+      }
+    } catch (err) {
+      console.error('Cancel error:', err);
+      alert('An error occurred while cancelling your order.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (loading) {
@@ -459,19 +342,19 @@ export default function CustomerOrders() {
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-4 mb-2">
-                        <h3 className="font-semibold text-lg">{order.order_number}</h3>
-                        <Badge className={statusConfig[order.status].color}>
-                          <StatusIcon className="w-3 h-3 mr-1" />
-                          {statusConfig[order.status].label}
+                        <h3 className="font-semibold text-lg">{order.order_number || order.id.slice(0, 8).toUpperCase()}</h3>
+                        <Badge className={`${statusConfig[order.status]?.color || 'bg-gray-100 text-gray-800'}`}>
+                          {StatusIcon && <StatusIcon className="w-3 h-3 mr-1" />}
+                          {statusConfig[order.status]?.label || order.status}
                         </Badge>
                       </div>
                       <p className="text-sm text-gray-600 mb-2">
                         Placed on {new Date(order.created_at).toLocaleDateString()}
                       </p>
                       <div className="flex items-center gap-4 text-sm">
-                        <span>{order.items.length} items</span>
+                        <span>{order.order_items.length} items</span>
                         <span>•</span>
-                        <span className="font-semibold">${order.total_amount.toFixed(2)}</span>
+                        <span className="font-semibold">${Number(order.total_amount).toFixed(2)}</span>
                         {order.tracking_number && (
                           <>
                             <span>•</span>
@@ -489,14 +372,21 @@ export default function CustomerOrders() {
                         <Eye className="w-4 h-4 mr-1" />
                         View Details
                       </Button>
-                      {order.status === 'delivered' && (
-                        <Button variant="outline" size="sm">
-                          <Download className="w-4 h-4 mr-1" />
-                          Invoice
-                        </Button>
-                      )}
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => window.open(`/api/invoice/${order.id}`, '_blank')}
+                      >
+                        <Download className="w-4 h-4 mr-1" />
+                        Invoice
+                      </Button>
                       {['pending', 'processing'].includes(order.status) && (
-                        <Button variant="destructive" size="sm">
+                        <Button 
+                          variant="destructive" 
+                          size="sm"
+                          onClick={() => handleCancelOrder(order.id)}
+                          disabled={loading}
+                        >
                           Cancel Order
                         </Button>
                       )}
@@ -505,22 +395,22 @@ export default function CustomerOrders() {
 
                   {/* Order Items Preview */}
                   <div className="mt-4 flex gap-4">
-                    {order.items.slice(0, 3).map((item) => (
+                    {order.order_items.slice(0, 3).map((item) => (
                       <div key={item.id} className="flex items-center gap-2">
                         <img
-                          src={item.product_image}
-                          alt={item.product_name}
+                          src={item.products?.image_url || 'https://picsum.photos/seed/product/100/100'}
+                          alt={item.products?.name}
                           className="w-12 h-12 object-cover rounded"
                         />
                         <div className="text-sm">
-                          <p className="font-medium line-clamp-1">{item.product_name}</p>
-                          <p className="text-gray-600">Qty: {item.quantity} × ${item.price}</p>
+                          <p className="font-medium line-clamp-1">{item.products?.name}</p>
+                          <p className="text-gray-600">Qty: {item.quantity} × ${Number(item.unit_price).toFixed(2)}</p>
                         </div>
                       </div>
                     ))}
-                    {order.items.length > 3 && (
+                    {order.order_items.length > 3 && (
                       <div className="flex items-center text-sm text-gray-600">
-                        +{order.items.length - 3} more items
+                        +{order.order_items.length - 3} more items
                       </div>
                     )}
                   </div>
@@ -569,23 +459,32 @@ export default function CustomerOrders() {
 
               {/* Items */}
               <div>
-                <h3 className="font-semibold mb-4">Items ({selectedOrder.items.length})</h3>
-                <div className="space-y-4">
-                  {selectedOrder.items.map((item) => (
-                    <div key={item.id} className="flex items-center gap-4 p-4 border rounded-lg">
-                      <img
-                        src={item.product_image}
-                        alt={item.product_name}
-                        className="w-16 h-16 object-cover rounded"
-                      />
-                      <div className="flex-1">
-                        <h4 className="font-medium">{item.product_name}</h4>
-                        {item.variant && <p className="text-sm text-gray-600">{item.variant}</p>}
-                        <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
+                <h3 className="font-semibold mb-4 text-sky-900 border-b border-sky-100 pb-2">Purchased Items ({selectedOrder.order_items.length})</h3>
+                <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                  {selectedOrder.order_items.map((item: any) => (
+                    <div key={item.id} className="flex items-center gap-4 p-4 border border-slate-100 rounded-2xl bg-white hover:border-sky-200 transition-colors">
+                      <div className="w-16 h-16 bg-slate-50 shrink-0 border border-slate-100 rounded-xl overflow-hidden shadow-sm">
+                        {item.products?.image_url && !imageErrors[item.id] ? (
+                          <img
+                            src={item.products.image_url}
+                            alt={item.products.name}
+                            className="w-full h-full object-cover"
+                            onError={() => setImageErrors(prev => ({ ...prev, [item.id]: true }))}
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-2">
+                            <ShoppingBag className="w-6 h-6 text-slate-200" />
+                          </div>
+                        )}
                       </div>
-                      <div className="text-right">
-                        <p className="font-semibold">${(item.price * item.quantity).toFixed(2)}</p>
-                        <p className="text-sm text-gray-600">${item.price} each</p>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-bold text-slate-900 truncate">{item.products?.name}</h4>
+                        {item.variant && <p className="text-xs text-slate-500 bg-slate-100 inline-block px-2 py-0.5 rounded-full mt-1 mb-1">{item.variant}</p>}
+                        <p className="text-sm text-slate-600">Quantity: <span className="font-bold text-slate-900">{item.quantity}</span></p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="font-bold text-sky-600">${(Number(item.unit_price) * item.quantity).toFixed(2)}</p>
+                        <p className="text-[10px] text-slate-400 font-medium">${Number(item.unit_price).toFixed(2)} each</p>
                       </div>
                     </div>
                   ))}
@@ -595,46 +494,55 @@ export default function CustomerOrders() {
               {/* Shipping & Billing */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h3 className="font-semibold mb-4">Shipping Address</h3>
-                  <div className="text-sm space-y-1">
-                    <p>{selectedOrder.shipping_address.street}</p>
-                    <p>
-                      {selectedOrder.shipping_address.city}, {selectedOrder.shipping_address.state} {selectedOrder.shipping_address.zip_code}
-                    </p>
-                    <p>{selectedOrder.shipping_address.country}</p>
+                  <h3 className="font-semibold mb-4 text-sky-900 border-b border-sky-100 pb-2 flex items-center gap-2">
+                    <MapPin className="w-4 h-4" /> Shipping Address
+                  </h3>
+                  <div className="text-sm space-y-1 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                    {typeof selectedOrder.shipping_address === 'object' ? (
+                      <>
+                        <p className="font-bold text-slate-900">{selectedOrder.shipping_address.full_name}</p>
+                        <p>{selectedOrder.shipping_address.address}</p>
+                        <p>{selectedOrder.shipping_address.city}, {selectedOrder.shipping_address.state} {selectedOrder.shipping_address.zip_code}</p>
+                        <p className="text-sky-600 font-medium">{selectedOrder.shipping_address.country}</p>
+                        <p className="text-slate-500 italic mt-2">{selectedOrder.shipping_address.phone}</p>
+                      </>
+                    ) : (
+                      <p>{selectedOrder.shipping_address || 'Address not specified'}</p>
+                    )}
                   </div>
                 </div>
                 <div>
-                  <h3 className="font-semibold mb-4">Billing Address</h3>
-                  <div className="text-sm space-y-1">
-                    <p>{selectedOrder.billing_address.street}</p>
-                    <p>
-                      {selectedOrder.billing_address.city}, {selectedOrder.billing_address.state} {selectedOrder.billing_address.zip_code}
+                  <h3 className="font-semibold mb-4 text-sky-900 border-b border-sky-100 pb-2 flex items-center gap-2">
+                    <CreditCard className="w-4 h-4" /> Payment Details
+                  </h3>
+                  <div className="text-sm p-4 rounded-xl bg-orange-50 border border-orange-100 text-orange-800 font-medium h-full flex flex-col justify-center">
+                    <p className="uppercase tracking-wider text-[10px] text-orange-400 mb-1">Method</p>
+                    <p className="text-lg font-bold">
+                      {selectedOrder.payment_method === 'cod' ? 'Cash on Delivery (COD)' : 'Prepaid / Online'}
                     </p>
-                    <p>{selectedOrder.billing_address.country}</p>
                   </div>
                 </div>
               </div>
 
               {/* Order Summary */}
               <div>
-                <h3 className="font-semibold mb-4">Order Summary</h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
+                <h3 className="font-semibold mb-4 text-sky-900 border-b border-sky-100 pb-2">Financial Summary</h3>
+                <div className="space-y-3 bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                  <div className="flex justify-between text-slate-600">
                     <span>Subtotal</span>
-                    <span>${selectedOrder.total_amount.toFixed(2)}</span>
+                    <span className="font-medium text-slate-900">${(Number(selectedOrder.total_amount) - (Number(selectedOrder.tax_amount || 0) + Number(selectedOrder.shipping_amount || 0))).toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between text-slate-600">
                     <span>Shipping</span>
-                    <span>Free</span>
+                    <span className="font-medium text-slate-900">${Number(selectedOrder.shipping_amount || 0).toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between text-slate-600 border-b border-slate-200 pb-3">
                     <span>Tax</span>
-                    <span>$0.00</span>
+                    <span className="font-medium text-slate-900">${Number(selectedOrder.tax_amount || 0).toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between font-semibold text-lg pt-2 border-t">
-                    <span>Total</span>
-                    <span>${selectedOrder.total_amount.toFixed(2)}</span>
+                  <div className="flex justify-between font-black text-2xl pt-2 text-sky-700">
+                    <span>Total Paid</span>
+                    <span>${Number(selectedOrder.total_amount).toFixed(2)} CAD</span>
                   </div>
                 </div>
               </div>

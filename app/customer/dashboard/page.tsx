@@ -46,6 +46,8 @@ interface RecentOrder {
   total_amount: number;
   created_at: string;
   items_count: number;
+  hasLowStock?: boolean;
+  lowStockItems?: string[];
 }
 
 interface Recommendation {
@@ -121,22 +123,36 @@ export default function CustomerDashboard() {
           membershipTier
         });
 
-        // Fetch recent orders
+        // Fetch recent orders with stock information
         const { data: recentOrdersData } = await supabase
           .from('orders')
-          .select('id, order_number, status, total_amount, created_at, order_items(count)')
+          .select(`
+            id, 
+            order_number, 
+            status, 
+            total_amount, 
+            created_at, 
+            order_items!inner(id, product_id, quantity, product:products(id, name, image_url, stock_quantity))
+          `)
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
           .limit(5);
 
-        setRecentOrders((recentOrdersData || []).map(order => ({
-          id: order.id,
-          order_number: order.order_number,
-          status: order.status,
-          total_amount: order.total_amount,
-          created_at: order.created_at,
-          items_count: order.order_items?.[0]?.count || 0
-        })));
+        setRecentOrders((recentOrdersData || []).map(order => {
+          const items = order.order_items || [];
+          const lowStockItems = items.filter(item => item.product?.stock_quantity < 5);
+          
+          return {
+            id: order.id,
+            order_number: order.order_number,
+            status: order.status,
+            total_amount: order.total_amount,
+            created_at: order.created_at,
+            items_count: items.length,
+            hasLowStock: lowStockItems.length > 0,
+            lowStockItems: lowStockItems.map(item => item.product?.name || 'Unknown Product')
+          };
+        }));
 
         // Mock recommendations
         setRecommendations([
@@ -410,6 +426,16 @@ export default function CustomerDashboard() {
                           <p className="text-xs text-gray-500">
                             {new Date(order.created_at).toLocaleDateString()}
                           </p>
+                          {order.hasLowStock && (
+                            <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-lg">
+                              <p className="text-xs font-bold text-red-700 mb-1">
+                                ⚠️ Low Stock Alert
+                              </p>
+                              <p className="text-xs text-red-600">
+                                {order.lowStockItems?.join(', ')}
+                              </p>
+                            </div>
+                          )}
                         </div>
                       </div>
                       <div className="text-right">

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Poppins, IBM_Plex_Sans } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { CartProvider } from '@/contexts/cart-context'
 import './globals.css'
 
 const _poppins = Poppins({ 
@@ -43,7 +44,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${_poppins.variable} ${_ibmPlexSans.variable}`}>
       <body className="font-sans antialiased bg-background text-foreground">
-        {children}
+        <CartProvider>
+          {children}
+        </CartProvider>
         <Analytics />
       </body>
     </html>

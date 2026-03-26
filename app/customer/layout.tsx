@@ -5,8 +5,10 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Home, Package, Ticket, User, LogOut, Menu, X } from 'lucide-react';
+import { ShoppingCart, Home, Package, Ticket, User, LogOut, Menu, X, Heart, ShoppingBag } from 'lucide-react';
 import { AppCompanion } from '@/components/AppCompanion';
+import { CartBadge } from '@/components/cart-badge';
+import { useCart } from '@/contexts/cart-context';
 
 export default function CustomerLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -14,6 +16,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { items } = useCart();
   const supabase = createClient();
 
   useEffect(() => {
@@ -53,8 +56,10 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
   const navItems = [
     { href: '/customer/products', label: 'Products', icon: Package },
+    { href: '/customer/cart', label: 'Cart', icon: ShoppingBag },
     { href: '/customer/dashboard', label: 'Stats', icon: Home },
     { href: '/customer/orders', label: 'Orders', icon: ShoppingCart },
+    { href: '/customer/wishlist', label: 'Wishlist', icon: Heart },
     { href: '/customer/support', label: 'Support', icon: Ticket },
     { href: '/customer/account', label: 'Account', icon: User },
   ];
@@ -67,18 +72,25 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   return (
     <div className="min-h-screen bg-background">
       {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 border-b border-border bg-background">
-        <div className="flex items-center justify-between h-16 px-4">
-          <Link href="/" className="flex items-center gap-2 font-bold text-primary">
-            <ShoppingCart className="w-5 h-5" />
-            Paras
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 border-b border-border bg-background/95 backdrop-blur-md">
+        <div className="flex items-center justify-between h-12 px-3">
+          <Link href="/" className="flex items-center gap-2 group">
+            <img 
+              src="https://flem.xo.je/uploads/brand-logo_2e73a483.png" 
+              alt="Paras Logo" 
+              className="h-6 w-auto object-contain group-hover:scale-110 transition-transform duration-300" 
+            />
+            <span className="font-bold text-sky-600 text-sm">Paras</span>
           </Link>
-          <button
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-2 hover:bg-muted rounded-lg"
-          >
-            {isSidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
+          <div className="flex items-center gap-2">
+            <CartBadge />
+            <button
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="p-1.5 hover:bg-muted rounded-lg"
+            >
+              {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -117,9 +129,18 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
       {/* Desktop Sidebar */}
       <div className="hidden lg:fixed left-0 top-0 bottom-0 w-64 border-r border-border bg-background lg:flex flex-col">
         <div className="p-6">
-          <Link href="/" className="flex items-center gap-2 font-bold text-lg text-primary">
-            <ShoppingCart className="w-6 h-6" />
-            Paras
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="w-10 h-10 bg-sky-50 rounded-xl flex items-center justify-center group-hover:bg-sky-100 transition-colors duration-300">
+              <img 
+                src="https://flem.xo.je/uploads/brand-logo_2e73a483.png" 
+                alt="Paras Logo" 
+                className="w-8 h-8 object-contain" 
+              />
+            </div>
+            <div className="flex flex-col">
+              <span className="font-bold text-lg text-foreground leading-tight">Paras</span>
+              <span className="text-[10px] text-sky-500 font-bold uppercase tracking-widest">Pharmacy Supply</span>
+            </div>
           </Link>
         </div>
 
@@ -155,11 +176,30 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
       </div>
 
       {/* Main Content */}
-      <div className="lg:ml-64 pt-16 lg:pt-0">
+      <div className="lg:ml-64 pt-12 lg:pt-0">
         {children}
       </div>
 
       <AppCompanion />
+
+      {/* Global Floating Action Button for Cart */}
+      <div className="fixed bottom-6 right-6 z-[60] animate-in slide-in-from-bottom-10 duration-500 ease-out">
+        <Link href="/customer/cart">
+          <Button 
+            size="lg" 
+            className="h-14 w-14 rounded-full bg-primary shadow-2xl flex items-center justify-center p-0 border-2 border-white/20 hover:scale-110 active:scale-95 transition-all"
+          >
+            <div className="relative">
+              <ShoppingCart className="w-6 h-6 text-white" />
+              {items.length > 0 && (
+                <span className="absolute -top-3 -right-3 bg-destructive text-white text-[10px] font-bold h-5 w-5 rounded-full flex items-center justify-center border-2 border-white animate-in zoom-in duration-300">
+                  {items.reduce((sum: number, item: any) => sum + item.quantity, 0)}
+                </span>
+              )}
+            </div>
+          </Button>
+        </Link>
+      </div>
     </div>
   );
 }

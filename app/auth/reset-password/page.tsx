@@ -11,7 +11,9 @@ import { Spinner } from '@/components/ui/spinner';
 import { apiClient } from '@/lib/api-client';
 import { AlertCircle, Mail, KeyRound, CheckCircle, Eye, EyeOff } from 'lucide-react';
 
-export default function ResetPasswordPage() {
+import { Suspense } from 'react';
+
+function ResetPasswordContent() {
   const searchParams = useSearchParams();
   const code = searchParams.get('code');
   
@@ -25,13 +27,34 @@ export default function ResetPasswordPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
+  // Auth state
+  const [user, setUser] = useState<any>(null);
+  
   // Common states
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
-  // Determine which form to show based on presence of code
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const { data: { user } } = await apiClient.supabaseClient.auth.getUser();
+        setUser(user);
+      } catch (err) {
+        console.error('Session check error:', err);
+      } finally {
+        setIsInitialLoading(false);
+      }
+    };
+    checkSession();
+  }, []);
+
+  // Determine which form to show: 
+  // 1. If we have a code in URL (direct click or legacy flow)
+  // 2. If we have an active session (robust callback flow)
   const hasResetCode = code && code.trim() !== '';
+  const canResetPassword = hasResetCode || (user && !success);
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,7 +99,19 @@ export default function ResetPasswordPage() {
         throw new Error('Passwords do not match');
       }
 
-      const { error: resetError } = await apiClient.updatePasswordWithCode(code, newPassword);
+      let resetError;
+      
+      if (hasResetCode) {
+        // If we have a code, use the exchange + update method
+        const result = await apiClient.updatePasswordWithCode(code || '', newPassword);
+        resetError = result.error;
+      } else if (user) {
+        // If we are already authenticated (via callback), just update directly
+        const result = await apiClient.updatePassword(newPassword);
+        resetError = result.error;
+      } else {
+        throw new Error('Reset session expired. Please request a new link.');
+      }
       
       if (resetError) {
         throw new Error(resetError);
@@ -90,8 +125,20 @@ export default function ResetPasswordPage() {
     }
   };
 
+  // Show loading during initial session check
+  if (isInitialLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-sky-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md border-0 shadow-lg p-8 text-center">
+          <Spinner className="w-8 h-8 mx-auto mb-4 text-primary" />
+          <p className="text-sm text-muted-foreground">Verifying your request...</p>
+        </Card>
+      </div>
+    );
+  }
+
   // Show success message after password reset
-  if (success && hasResetCode) {
+  if (success && canResetPassword) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-sky-50 flex items-center justify-center p-4">
         <Card className="w-full max-w-md border-0 shadow-lg">
@@ -137,8 +184,8 @@ export default function ResetPasswordPage() {
     );
   }
 
-  // Show new password form when code is present
-  if (hasResetCode) {
+  // Show new password form when can reset
+  if (canResetPassword) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-sky-50 flex items-center justify-center p-4">
         <Card className="w-full max-w-md border-0 shadow-lg">
@@ -270,7 +317,7 @@ export default function ResetPasswordPage() {
           )}
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleEmailSubmit} className="space-y-6">
             <FieldGroup>
               <Field>
                 <FieldLabel htmlFor="email">Email Address</FieldLabel>
@@ -318,5 +365,20 @@ export default function ResetPasswordPage() {
         </div>
       </Card>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-sky-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md border-0 shadow-lg p-8 text-center">
+          <Spinner className="w-8 h-8 mx-auto mb-4" />
+          <p className="text-sm text-muted-foreground">Loading reset options...</p>
+        </Card>
+      </div>
+    }>
+      <ResetPasswordContent />
+    </Suspense>
   );
 }

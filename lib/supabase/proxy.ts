@@ -10,7 +10,7 @@ export async function updateSession(request: NextRequest) {
   // variable. Always create a new one on each request.
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY!,
     {
       cookies: {
         getAll() {
@@ -40,6 +40,21 @@ export async function updateSession(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser()
+
+  // Check if user needs to force reset password
+  if (user && !request.nextUrl.pathname.startsWith('/auth/force-reset')) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('must_reset_password')
+      .eq('id', user.id)
+      .single()
+    
+    if (profile?.must_reset_password) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/auth/force-reset'
+      return NextResponse.redirect(url)
+    }
+  }
 
   if (
     // if the user is not logged in and the app path, in this case, /protected, is accessed, redirect to the login page

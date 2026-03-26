@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS categories (
 -- Profiles table (extends auth.users) - Fixed
 CREATE TABLE IF NOT EXISTS profiles (
     id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+    email TEXT,
     full_name TEXT,
     phone TEXT,
     address TEXT,
@@ -38,6 +39,8 @@ CREATE TABLE IF NOT EXISTS profiles (
     bio TEXT,
     loyalty_points INTEGER DEFAULT 0,
     membership_tier membership_tier DEFAULT 'Bronze',
+    is_admin BOOLEAN DEFAULT false,
+    must_reset_password BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -208,6 +211,41 @@ CREATE TABLE IF NOT EXISTS user_activity (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Email preferences table
+CREATE TABLE IF NOT EXISTS email_preferences (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE,
+    marketing_emails BOOLEAN DEFAULT true,
+    order_updates BOOLEAN DEFAULT true,
+    newsletter BOOLEAN DEFAULT true,
+    promotions BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Email templates table
+CREATE TABLE IF NOT EXISTS email_templates (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    name TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    type TEXT CHECK (type IN ('marketing', 'order_update', 'newsletter', 'promotion')) DEFAULT 'marketing',
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+-- Coming soon products table
+CREATE TABLE IF NOT EXISTS coming_soon_products (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    expected_date DATE,
+    priority TEXT CHECK (priority IN ('low', 'medium', 'high')) DEFAULT 'medium',
+    is_active BOOLEAN DEFAULT true,
+    image_url TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Storage buckets
 INSERT INTO storage.buckets (id, name, public) VALUES 
 ('avatars', 'avatars', true),
@@ -229,6 +267,9 @@ ALTER TABLE customer_metrics ENABLE ROW LEVEL SECURITY;
 ALTER TABLE faqs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE product_reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_activity ENABLE ROW LEVEL SECURITY;
+ALTER TABLE coming_soon_products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE email_preferences ENABLE ROW LEVEL SECURITY;
+ALTER TABLE email_templates ENABLE ROW LEVEL SECURITY;
 
 -- Profiles RLS
 CREATE POLICY "Users can view own profile" ON profiles
@@ -249,7 +290,7 @@ CREATE POLICY "Admins can manage categories" ON categories
         EXISTS (
             SELECT 1 FROM profiles 
             WHERE profiles.id = auth.uid() 
-            AND profiles.user_metadata->>'is_admin' = 'true'
+            AND profiles.is_admin = true
         )
     );
 
@@ -262,7 +303,7 @@ CREATE POLICY "Admins can manage products" ON products
         EXISTS (
             SELECT 1 FROM profiles 
             WHERE profiles.id = auth.uid() 
-            AND profiles.user_metadata->>'is_admin' = 'true'
+            AND profiles.is_admin = true
         )
     );
 
@@ -278,7 +319,7 @@ CREATE POLICY "Admins can view all orders" ON orders
         EXISTS (
             SELECT 1 FROM profiles 
             WHERE profiles.id = auth.uid() 
-            AND profiles.user_metadata->>'is_admin' = 'true'
+            AND profiles.is_admin = true
         )
     );
 
@@ -318,7 +359,7 @@ CREATE POLICY "Admins can view all tickets" ON support_tickets
         EXISTS (
             SELECT 1 FROM profiles 
             WHERE profiles.id = auth.uid() 
-            AND profiles.user_metadata->>'is_admin' = 'true'
+            AND profiles.is_admin = true
         )
     );
 
@@ -349,7 +390,7 @@ CREATE POLICY "Admins can manage email templates" ON email_templates
         EXISTS (
             SELECT 1 FROM profiles 
             WHERE profiles.id = auth.uid() 
-            AND profiles.user_metadata->>'is_admin' = 'true'
+            AND profiles.is_admin = true
         )
     );
 
@@ -359,7 +400,7 @@ CREATE POLICY "Admins can view email logs" ON email_logs
         EXISTS (
             SELECT 1 FROM profiles 
             WHERE profiles.id = auth.uid() 
-            AND profiles.user_metadata->>'is_admin' = 'true'
+            AND profiles.is_admin = true
         )
     );
 
@@ -369,7 +410,7 @@ CREATE POLICY "Admins can manage customer metrics" ON customer_metrics
         EXISTS (
             SELECT 1 FROM profiles 
             WHERE profiles.id = auth.uid() 
-            AND profiles.user_metadata->>'is_admin' = 'true'
+            AND profiles.is_admin = true
         )
     );
 
@@ -382,7 +423,7 @@ CREATE POLICY "Admins can manage FAQs" ON faqs
         EXISTS (
             SELECT 1 FROM profiles 
             WHERE profiles.id = auth.uid() 
-            AND profiles.user_metadata->>'is_admin' = 'true'
+            AND profiles.is_admin = true
         )
     );
 
@@ -399,6 +440,42 @@ CREATE POLICY "Users can view own activity" ON user_activity
 
 CREATE POLICY "Users can create own activity" ON user_activity
     FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+-- Coming soon products RLS
+CREATE POLICY "Coming soon products are viewable by everyone" ON coming_soon_products
+    FOR SELECT USING (is_active = true);
+
+CREATE POLICY "Admins can manage coming soon products" ON coming_soon_products
+    FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM profiles 
+            WHERE profiles.id = auth.uid() 
+            AND profiles.is_admin = true
+        )
+    );
+
+-- Email preferences RLS
+CREATE POLICY "Users can view and update own email preferences" ON email_preferences
+    FOR ALL USING (auth.uid() = user_id);
+
+CREATE POLICY "Admins can view all email preferences" ON email_preferences
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM profiles 
+            WHERE profiles.id = auth.uid() 
+            AND profiles.is_admin = true
+        )
+    );
+
+-- Email templates RLS
+CREATE POLICY "Admins can manage email templates" ON email_templates
+    FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM profiles 
+            WHERE profiles.id = auth.uid() 
+            AND profiles.is_admin = true
+        )
+    );
 
 -- Functions and Triggers
 
@@ -452,6 +529,15 @@ CREATE TRIGGER update_product_reviews_updated_at BEFORE UPDATE ON product_review
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_user_activity_updated_at BEFORE UPDATE ON user_activity
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_coming_soon_products_updated_at BEFORE UPDATE ON coming_soon_products
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_email_preferences_updated_at BEFORE UPDATE ON email_preferences
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_email_templates_updated_at BEFORE UPDATE ON email_templates
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Function to log user activity

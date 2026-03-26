@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 
 /**
@@ -11,7 +12,7 @@ export async function createClient() {
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY!,
     {
       cookies: {
         getAll() {
@@ -31,4 +32,23 @@ export async function createClient() {
       },
     },
   )
+}
+
+export async function createAdminClient() {
+  // Try multiple possible environment variable names for the service role key
+  const key = (
+    process.env.SUPABASE_SERVICE_ROLE_KEY || 
+    process.env.SERVICE_ROLE || 
+    process.env.SECRET_API_KEY || 
+    ''
+  ).trim();
+  
+  const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim();
+  
+  return createSupabaseClient(url, key, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
 }

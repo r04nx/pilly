@@ -2,698 +2,303 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { 
-  MessageCircle, 
-  Send, 
-  Search, 
-  Plus, 
-  Clock, 
-  CheckCircle, 
-  AlertCircle, 
-  HelpCircle,
-  Phone,
-  Mail,
-  FileText,
-  ChevronDown,
-  ChevronUp
+import {
+  MessageSquare, Plus, X, AlertCircle, CheckCircle, Clock, Send, ChevronDown, RefreshCw
 } from 'lucide-react';
 
-interface SupportTicket {
-  id: string;
-  ticket_number: string;
-  subject: string;
-  description: string;
-  category: string;
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  status: 'open' | 'in_progress' | 'resolved' | 'closed';
-  created_at: string;
-  updated_at: string;
-  replies?: number;
-}
+const CATEGORIES = ['general', 'order', 'payment', 'returns', 'product', 'account', 'other'];
+const PRIORITIES = ['low', 'medium', 'high', 'urgent'];
 
-interface FAQ {
-  id: string;
-  question: string;
-  answer: string;
-  category: string;
-  helpful: number;
-}
+const STATUS_COLORS: Record<string, string> = {
+  open: 'bg-blue-100 text-blue-700 border-blue-200',
+  in_progress: 'bg-amber-100 text-amber-700 border-amber-200',
+  resolved: 'bg-green-100 text-green-700 border-green-200',
+  closed: 'bg-gray-100 text-gray-600 border-gray-200',
+};
 
-export default function CustomerSupport() {
-  const [tickets, setTickets] = useState<SupportTicket[]>([]);
-  const [faqs, setFaqs] = useState<FAQ[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('tickets');
-  const [showNewTicketForm, setShowNewTicketForm] = useState(false);
-  const [expandedFAQs, setExpandedFAQs] = useState<Set<string>>(new Set());
-  
-  // New ticket form state
-  const [newTicket, setNewTicket] = useState({
-    subject: '',
-    description: '',
-    category: 'general',
-    priority: 'medium'
-  });
-  
-  // Search states
-  const [ticketSearch, setTicketSearch] = useState('');
-  const [faqSearch, setFaqSearch] = useState('');
-  const [faqCategory, setFaqCategory] = useState('all');
+const PRIORITY_COLORS: Record<string, string> = {
+  low: 'bg-gray-100 text-gray-600',
+  medium: 'bg-blue-100 text-blue-700',
+  high: 'bg-orange-100 text-orange-700',
+  urgent: 'bg-red-100 text-red-700',
+};
 
+export default function CustomerSupportPage() {
   const supabase = createClient();
+  const [tickets, setTickets] = useState<any[]>([]);
+  const [selectedTicket, setSelectedTicket] = useState<any>(null);
+  const [replies, setReplies] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [replyText, setReplyText] = useState('');
+  const [sendingReply, setSendingReply] = useState(false);
+  const [form, setForm] = useState({
+    subject: '', description: '', category: 'general', priority: 'medium'
+  });
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
-  const ticketStatusConfig = {
-    open: { label: 'Open', color: 'bg-blue-100 text-blue-800', icon: MessageCircle },
-    in_progress: { label: 'In Progress', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
-    resolved: { label: 'Resolved', color: 'bg-green-100 text-green-800', icon: CheckCircle },
-    closed: { label: 'Closed', color: 'bg-gray-100 text-gray-800', icon: FileText }
-  };
-
-  const priorityConfig = {
-    low: { label: 'Low', color: 'bg-gray-100 text-gray-800' },
-    medium: { label: 'Medium', color: 'bg-blue-100 text-blue-800' },
-    high: { label: 'High', color: 'bg-orange-100 text-orange-800' },
-    urgent: { label: 'Urgent', color: 'bg-red-100 text-red-800' }
-  };
-
-  const categories = [
-    { value: 'general', label: 'General Inquiry' },
-    { value: 'technical', label: 'Technical Support' },
-    { value: 'billing', label: 'Billing & Payments' },
-    { value: 'shipping', label: 'Shipping & Delivery' },
-    { value: 'returns', label: 'Returns & Refunds' },
-    { value: 'account', label: 'Account Issues' }
-  ];
-
-  const faqCategories = [
-    { value: 'all', label: 'All Categories' },
-    { value: 'orders', label: 'Orders & Shipping' },
-    { value: 'returns', label: 'Returns & Refunds' },
-    { value: 'account', label: 'Account & Security' },
-    { value: 'payments', label: 'Payments & Billing' },
-    { value: 'products', label: 'Products & Services' }
-  ];
+  useEffect(() => { fetchTickets(); }, []);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+    if (selectedTicket) fetchReplies(selectedTicket.id);
+  }, [selectedTicket]);
 
-        // Fetch tickets
-        const { data: ticketData, error: ticketError } = await supabase
-          .from('support_tickets')
-          .select(`
-            *,
-            ticket_replies(count)
-          `)
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
+  const fetchTickets = async () => {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase
+      .from('support_tickets')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+    setTickets(data || []);
+    setLoading(false);
+  };
 
-        if (ticketError) throw ticketError;
-        
-        const transformedTickets = (ticketData || []).map((ticket: any) => ({
-          ...ticket,
-          replies: ticket.ticket_replies?.[0]?.count || 0
-        }));
-        
-        setTickets(transformedTickets);
+  const fetchReplies = async (ticketId: string) => {
+    const { data } = await supabase
+      .from('ticket_replies')
+      .select('*, profiles(full_name, is_admin)')
+      .eq('ticket_id', ticketId)
+      .order('created_at', { ascending: true });
+    setReplies(data || []);
+  };
 
-        // Fetch FAQs
-        const { data: faqData, error: faqError } = await supabase
-          .from('faqs')
-          .select('*')
-          .order('helpful', { ascending: false });
-
-        if (faqError) throw faqError;
-        setFaqs(faqData || []);
-      } catch (error) {
-        console.error('Error fetching support data:', error);
-        // Mock data for demo
-        const mockTickets: SupportTicket[] = [
-          {
-            id: '1',
-            ticket_number: 'TKT-2024-001',
-            subject: 'Order not received',
-            description: 'I placed an order last week but haven\'t received it yet.',
-            category: 'shipping',
-            priority: 'high',
-            status: 'in_progress',
-            created_at: '2024-03-10T10:00:00Z',
-            updated_at: '2024-03-12T15:30:00Z',
-            replies: 2
-          },
-          {
-            id: '2',
-            ticket_number: 'TKT-2024-002',
-            subject: 'Refund request',
-            description: 'I would like to request a refund for my recent purchase.',
-            category: 'returns',
-            priority: 'medium',
-            status: 'open',
-            created_at: '2024-03-14T11:20:00Z',
-            updated_at: '2024-03-14T11:20:00Z',
-            replies: 0
-          }
-        ];
-
-        const mockFAQs: FAQ[] = [
-          {
-            id: '1',
-            question: 'How can I track my order?',
-            answer: 'You can track your order by going to the Orders page and clicking on "View Details" for your specific order. You will find the tracking number and real-time updates there.',
-            category: 'orders',
-            helpful: 45
-          },
-          {
-            id: '2',
-            question: 'What is your return policy?',
-            answer: 'We offer a 30-day return policy for most items. Products must be unused and in original packaging. Please visit our Returns page for detailed instructions.',
-            category: 'returns',
-            helpful: 38
-          },
-          {
-            id: '3',
-            question: 'How do I reset my password?',
-            answer: 'Click on "Forgot Password" on the login page, enter your email address, and follow the instructions sent to your email to reset your password.',
-            category: 'account',
-            helpful: 52
-          },
-          {
-            id: '4',
-            question: 'What payment methods do you accept?',
-            answer: 'We accept all major credit cards, debit cards, PayPal, Apple Pay, and Google Pay for your convenience.',
-            category: 'payments',
-            helpful: 29
-          }
-        ];
-
-        setTickets(mockTickets);
-        setFaqs(mockFAQs);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  const handleCreateTicket = async (e: React.FormEvent) => {
+  const createTicket = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const ticketData = {
-        user_id: user.id,
-        ticket_number: `TKT-${new Date().getFullYear()}-${String(tickets.length + 1).padStart(3, '0')}`,
-        subject: newTicket.subject,
-        description: newTicket.description,
-        category: newTicket.category,
-        priority: newTicket.priority,
-        status: 'open'
-      };
-
-      const { data, error } = await supabase
-        .from('support_tickets')
-        .insert(ticketData)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      setTickets([data, ...tickets]);
-      setNewTicket({ subject: '', description: '', category: 'general', priority: 'medium' });
-      setShowNewTicketForm(false);
-    } catch (error) {
-      console.error('Error creating ticket:', error);
+    if (!form.subject.trim() || !form.description.trim()) {
+      setError('Subject and description are required.');
+      return;
     }
-  };
-
-  const toggleFAQ = (faqId: string) => {
-    setExpandedFAQs(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(faqId)) {
-        newSet.delete(faqId);
-      } else {
-        newSet.add(faqId);
-      }
-      return newSet;
+    setCreating(true); setError('');
+    const { data: { user } } = await supabase.auth.getUser();
+    const { error: err } = await supabase.from('support_tickets').insert({
+      user_id: user!.id,
+      ...form,
     });
-  };
-
-  const markFAQHelpful = async (faqId: string) => {
-    try {
-      const { error } = await supabase
-        .from('faqs')
-        .update({ helpful: faqs.find(f => f.id === faqId)!.helpful + 1 })
-        .eq('id', faqId);
-
-      if (error) throw error;
-
-      setFaqs(prev => prev.map(faq => 
-        faq.id === faqId ? { ...faq, helpful: faq.helpful + 1 } : faq
-      ));
-    } catch (error) {
-      console.error('Error updating FAQ:', error);
+    if (err) { setError(err.message); }
+    else {
+      setSuccess('Ticket created! Our team will respond within 24 hours.');
+      setForm({ subject: '', description: '', category: 'general', priority: 'medium' });
+      setShowForm(false);
+      fetchTickets();
+      setTimeout(() => setSuccess(''), 5000);
     }
+    setCreating(false);
   };
 
-  const filteredTickets = tickets.filter(ticket =>
-    ticket.subject.toLowerCase().includes(ticketSearch.toLowerCase()) ||
-    ticket.description.toLowerCase().includes(ticketSearch.toLowerCase())
-  );
-
-  const filteredFAQs = faqs.filter(faq => {
-    const matchesSearch = faq.question.toLowerCase().includes(faqSearch.toLowerCase()) ||
-                         faq.answer.toLowerCase().includes(faqSearch.toLowerCase());
-    const matchesCategory = faqCategory === 'all' || faq.category === faqCategory;
-    return matchesSearch && matchesCategory;
-  });
-
-  if (loading) {
-    return (
-      <div className="p-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
-          <div className="space-y-4">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-32 bg-gray-200 rounded"></div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const sendReply = async () => {
+    if (!replyText.trim() || !selectedTicket) return;
+    setSendingReply(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    const { error: err } = await supabase.from('ticket_replies').insert({
+      ticket_id: selectedTicket.id,
+      user_id: user!.id,
+      message: replyText,
+      is_admin_reply: false,
+    });
+    if (!err) {
+      setReplyText('');
+      fetchReplies(selectedTicket.id);
+    }
+    setSendingReply(false);
+  };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Support Center</h1>
-        <p className="text-gray-600">How can we help you today?</p>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Support Tickets</h1>
+          <p className="text-sm text-gray-500">Get help from our team</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={fetchTickets}>
+            <RefreshCw className="w-4 h-4" />
+          </Button>
+          <Button onClick={() => setShowForm(true)} className="bg-sky-600 hover:bg-sky-700">
+            <Plus className="w-4 h-4 mr-2" /> New Ticket
+          </Button>
+        </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="tickets">My Tickets</TabsTrigger>
-          <TabsTrigger value="faq">FAQ</TabsTrigger>
-          <TabsTrigger value="contact">Contact Us</TabsTrigger>
-          <TabsTrigger value="live">Live Chat</TabsTrigger>
-        </TabsList>
+      {/* Alerts */}
+      {error && <div className="flex gap-2 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm"><AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />{error}</div>}
+      {success && <div className="flex gap-2 p-4 bg-green-50 border border-green-200 rounded-xl text-green-700 text-sm"><CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />{success}</div>}
 
-        <TabsContent value="tickets">
-          <div className="space-y-6">
-            {/* Create New Ticket */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Plus className="w-5 h-5" />
-                      Create New Ticket
-                    </CardTitle>
-                    <CardDescription>
-                      Can't find what you're looking for? Create a support ticket.
-                    </CardDescription>
-                  </div>
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowNewTicketForm(!showNewTicketForm)}
-                  >
-                    {showNewTicketForm ? 'Cancel' : 'New Ticket'}
-                  </Button>
-                </div>
-              </CardHeader>
-              {showNewTicketForm && (
-                <CardContent className="p-4">
-                  <form onSubmit={handleCreateTicket} className="space-y-3">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="subject">Subject</Label>
-                        <Input
-                          id="subject"
-                          value={newTicket.subject}
-                          onChange={(e) => setNewTicket(prev => ({ ...prev, subject: e.target.value }))}
-                          placeholder="Brief description of your issue"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="category">Category</Label>
-                        <Select value={newTicket.category} onValueChange={(value) => setNewTicket(prev => ({ ...prev, category: value }))}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {categories.map(category => (
-                              <SelectItem key={category.value} value={category.value}>
-                                {category.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div>
-                      <Label htmlFor="priority">Priority</Label>
-                      <Select value={newTicket.priority} onValueChange={(value: any) => setNewTicket(prev => ({ ...prev, priority: value }))}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="low">Low</SelectItem>
-                          <SelectItem value="medium">Medium</SelectItem>
-                          <SelectItem value="high">High</SelectItem>
-                          <SelectItem value="urgent">Urgent</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="description">Description</Label>
-                      <Textarea
-                        id="description"
-                        value={newTicket.description}
-                        onChange={(e) => setNewTicket(prev => ({ ...prev, description: e.target.value }))}
-                        placeholder="Please provide detailed information about your issue"
-                        rows={4}
-                        required
-                      />
-                    </div>
-                    <Button type="submit">
-                      <Send className="w-4 h-4 mr-2" />
-                      Submit Ticket
-                    </Button>
-                  </form>
-                </CardContent>
-              )}
-            </Card>
-
-            {/* Search Tickets */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Search your tickets..."
-                value={ticketSearch}
-                onChange={(e) => setTicketSearch(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-
-            {/* Tickets List */}
-            {filteredTickets.length === 0 ? (
-              <Card>
-                <CardContent className="text-center py-12">
-                  <MessageCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No tickets found</h3>
-                  <p className="text-gray-600 mb-4">You haven't created any support tickets yet.</p>
-                  <Button onClick={() => setShowNewTicketForm(true)}>
-                    Create Your First Ticket
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-4">
-                {filteredTickets.map((ticket) => {
-                  const StatusIcon = ticketStatusConfig[ticket.status].icon;
-                  return (
-                    <Card key={ticket.id} className="hover:shadow-md transition-shadow">
-                      <CardContent className="p-6">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <h3 className="font-semibold text-lg">{ticket.subject}</h3>
-                              <Badge className={ticketStatusConfig[ticket.status].color}>
-                                <StatusIcon className="w-3 h-3 mr-1" />
-                                {ticketStatusConfig[ticket.status].label}
-                              </Badge>
-                              <Badge className={priorityConfig[ticket.priority].color}>
-                                {priorityConfig[ticket.priority].label}
-                              </Badge>
-                            </div>
-                            <p className="text-gray-600 mb-3 line-clamp-2">{ticket.description}</p>
-                            <div className="flex items-center gap-4 text-sm text-gray-500">
-                              <span>{ticket.ticket_number}</span>
-                              <span>•</span>
-                              <span>Created {new Date(ticket.created_at).toLocaleDateString()}</span>
-                              {ticket.replies > 0 && (
-                                <>
-                                  <span>•</span>
-                                  <span>{ticket.replies} replies</span>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                          <Button variant="outline" size="sm">
-                            View Details
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
+      {/* Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: 'Total', count: tickets.length, color: 'bg-blue-50 text-blue-700' },
+          { label: 'Open', count: tickets.filter(t => t.status === 'open').length, color: 'bg-amber-50 text-amber-700' },
+          { label: 'In Progress', count: tickets.filter(t => t.status === 'in_progress').length, color: 'bg-purple-50 text-purple-700' },
+          { label: 'Resolved', count: tickets.filter(t => t.status === 'resolved').length, color: 'bg-green-50 text-green-700' },
+        ].map(s => (
+          <div key={s.label} className={`rounded-xl p-4 ${s.color}`}>
+            <p className="text-xs font-bold uppercase opacity-70">{s.label}</p>
+            <p className="text-2xl font-black mt-1">{s.count}</p>
           </div>
-        </TabsContent>
+        ))}
+      </div>
 
-        <TabsContent value="faq">
-          <div className="space-y-6">
-            {/* FAQ Search and Filter */}
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  placeholder="Search FAQs..."
-                  value={faqSearch}
-                  onChange={(e) => setFaqSearch(e.target.value)}
-                  className="pl-10"
-                />
+      {/* Ticket List */}
+      {loading ? (
+        <div className="flex items-center justify-center py-12"><RefreshCw className="w-6 h-6 text-sky-500 animate-spin" /></div>
+      ) : tickets.length === 0 ? (
+        <div className="text-center py-16 bg-white rounded-2xl border border-gray-200">
+          <MessageSquare className="w-12 h-12 text-gray-200 mx-auto mb-3" />
+          <h3 className="font-bold text-gray-700">No support tickets yet</h3>
+          <p className="text-gray-400 text-sm mt-1">Create your first ticket to get help</p>
+          <Button onClick={() => setShowForm(true)} className="mt-4 bg-sky-600 hover:bg-sky-700">
+            <Plus className="w-4 h-4 mr-2" /> Create Ticket
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {tickets.map(ticket => (
+            <button key={ticket.id} onClick={() => setSelectedTicket(ticket)}
+              className="w-full bg-white border border-gray-200 hover:border-sky-300 rounded-xl p-4 text-left hover:shadow-md transition-all group">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <span className="text-xs font-mono text-gray-400">{ticket.ticket_number}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold border ${STATUS_COLORS[ticket.status]}`}>
+                      {ticket.status.replace('_', ' ')}
+                    </span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${PRIORITY_COLORS[ticket.priority]}`}>
+                      {ticket.priority}
+                    </span>
+                  </div>
+                  <p className="font-semibold text-gray-900 truncate">{ticket.subject}</p>
+                  <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{ticket.description}</p>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-xs text-gray-400">{new Date(ticket.created_at).toLocaleDateString('en-CA')}</p>
+                  <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full mt-1 inline-block capitalize">{ticket.category}</span>
+                </div>
               </div>
-              <Select value={faqCategory} onValueChange={setFaqCategory}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {faqCategories.map(category => (
-                    <SelectItem key={category.value} value={category.value}>
-                      {category.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Create Ticket Modal */}
+      {showForm && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
+            <div className="bg-gradient-to-r from-sky-600 to-blue-600 p-6 rounded-t-2xl flex items-center justify-between">
+              <h2 className="text-white font-bold text-lg">New Support Ticket</h2>
+              <button onClick={() => setShowForm(false)} className="text-white/70 hover:text-white"><X className="w-5 h-5" /></button>
+            </div>
+            <form onSubmit={createTicket} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Subject *</label>
+                <Input value={form.subject} onChange={e => setForm({...form, subject: e.target.value})}
+                  placeholder="Brief description of your issue" required />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Category</label>
+                  <select value={form.category} onChange={e => setForm({...form, category: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-400">
+                    {CATEGORIES.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase()+c.slice(1)}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Priority</label>
+                  <select value={form.priority} onChange={e => setForm({...form, priority: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-400">
+                    {PRIORITIES.map(p => <option key={p} value={p}>{p.charAt(0).toUpperCase()+p.slice(1)}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Description *</label>
+                <textarea value={form.description} onChange={e => setForm({...form, description: e.target.value})}
+                  rows={4} required placeholder="Describe your issue in detail…"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 resize-none" />
+              </div>
+              <div className="flex gap-3 justify-end pt-2">
+                <Button type="button" variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
+                <Button type="submit" disabled={creating} className="bg-sky-600 hover:bg-sky-700">
+                  {creating ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />Creating…</> : 'Create Ticket'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Ticket Detail Modal */}
+      {selectedTicket && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="bg-gradient-to-r from-sky-600 to-blue-600 p-6 rounded-t-2xl flex items-start justify-between">
+              <div>
+                <p className="text-sky-100 text-xs font-mono">{selectedTicket.ticket_number}</p>
+                <h2 className="text-white font-bold text-lg">{selectedTicket.subject}</h2>
+                <div className="flex gap-2 mt-1">
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-semibold bg-white/20 text-white border border-white/30`}>
+                    {selectedTicket.status.replace('_',' ')}
+                  </span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-semibold bg-white/20 text-white`}>
+                    {selectedTicket.priority}
+                  </span>
+                </div>
+              </div>
+              <button onClick={() => setSelectedTicket(null)} className="text-white/70 hover:text-white"><X className="w-5 h-5" /></button>
             </div>
 
-            {/* FAQ Categories */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              {faqCategories.slice(1).map(category => (
-                <Card key={category.value} className="text-center cursor-pointer hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <HelpCircle className="w-8 h-8 mx-auto mb-2 text-blue-500" />
-                    <p className="text-sm font-medium">{category.label}</p>
-                  </CardContent>
-                </Card>
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {/* Original message */}
+              <div className="bg-sky-50 border border-sky-100 rounded-xl p-4">
+                <p className="text-xs text-sky-500 font-semibold mb-1">Original Message</p>
+                <p className="text-sm text-gray-700">{selectedTicket.description}</p>
+                <p className="text-xs text-gray-400 mt-2">{new Date(selectedTicket.created_at).toLocaleString('en-CA')}</p>
+              </div>
+
+              {/* Admin notes */}
+              {selectedTicket.admin_notes && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                  <p className="text-xs text-amber-600 font-bold mb-1">📝 Admin Notes</p>
+                  <p className="text-sm text-amber-800">{selectedTicket.admin_notes}</p>
+                </div>
+              )}
+
+              {/* Replies */}
+              {replies.map(r => (
+                <div key={r.id} className={`flex ${r.is_admin_reply ? 'justify-start' : 'justify-end'}`}>
+                  <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm ${r.is_admin_reply ? 'bg-white border border-gray-200 rounded-tl-none' : 'bg-sky-600 text-white rounded-tr-none'}`}>
+                    {r.is_admin_reply && <p className="text-xs font-bold text-sky-600 mb-1">Support Team</p>}
+                    <p>{r.message}</p>
+                    <p className={`text-xs mt-1 ${r.is_admin_reply ? 'text-gray-400' : 'text-sky-200'}`}>
+                      {new Date(r.created_at).toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                </div>
               ))}
             </div>
 
-            {/* FAQ List */}
-            <div className="space-y-3">
-              {filteredFAQs.length === 0 ? (
-                <Card>
-                  <CardContent className="text-center py-8">
-                    <HelpCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">No FAQs found</h3>
-                    <p className="text-gray-600">Try adjusting your search or browse all categories.</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                filteredFAQs.map((faq) => (
-                  <Card key={faq.id}>
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <button
-                            onClick={() => toggleFAQ(faq.id)}
-                            className="text-left w-full group"
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <h3 className="font-semibold text-lg group-hover:text-blue-600 transition-colors">
-                                {faq.question}
-                              </h3>
-                              {expandedFAQs.has(faq.id) ? (
-                                <ChevronUp className="w-5 h-5 text-gray-400" />
-                              ) : (
-                                <ChevronDown className="w-5 h-5 text-gray-400" />
-                              )}
-                            </div>
-                          </button>
-                          {expandedFAQs.has(faq.id) && (
-                            <div className="mt-4 space-y-4">
-                              <p className="text-gray-600 leading-relaxed">{faq.answer}</p>
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm text-gray-500">Was this helpful?</span>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => markFAQHelpful(faq.id)}
-                                  >
-                                    👍 Yes ({faq.helpful})
-                                  </Button>
-                                </div>
-                                <Badge variant="outline" className="text-xs">
-                                  {faqCategories.find(c => c.value === faq.category)?.label}
-                                </Badge>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="contact">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Mail className="w-5 h-5" />
-                  Email Support
-                </CardTitle>
-                <CardDescription>
-                  Send us an email and we'll respond within 24 hours.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="email-subject">Subject</Label>
-                  <Input id="email-subject" placeholder="What can we help you with?" />
-                </div>
-                <div>
-                  <Label htmlFor="email-message">Message</Label>
-                  <Textarea
-                    id="email-message"
-                    placeholder="Describe your issue in detail..."
-                    rows={4}
-                  />
-                </div>
-                <Button className="w-full">
-                  <Send className="w-4 h-4 mr-2" />
-                  Send Email
+            {/* Reply input */}
+            {selectedTicket.status !== 'closed' && (
+              <div className="p-4 border-t border-gray-200 flex gap-3">
+                <textarea value={replyText} onChange={e => setReplyText(e.target.value)}
+                  rows={2} placeholder="Type your reply…"
+                  className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 resize-none" />
+                <Button onClick={sendReply} disabled={sendingReply || !replyText.trim()} className="bg-sky-600 hover:bg-sky-700 self-end">
+                  <Send className="w-4 h-4" />
                 </Button>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Phone className="w-5 h-5" />
-                  Phone Support
-                </CardTitle>
-                <CardDescription>
-                  Call us for immediate assistance during business hours.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="p-4 bg-blue-50 rounded-lg">
-                  <p className="font-semibold">Main Support Line</p>
-                  <p className="text-2xl font-bold text-blue-600">1-800-SUPPORT</p>
-                  <p className="text-sm text-gray-600">Mon-Fri: 9AM-6PM EST</p>
-                </div>
-                <div className="p-4 bg-green-50 rounded-lg">
-                  <p className="font-semibold">Emergency Support</p>
-                  <p className="text-2xl font-bold text-green-600">1-800-URGENT</p>
-                  <p className="text-sm text-gray-600">24/7 Available</p>
-                </div>
-                <div className="space-y-2">
-                  <h4 className="font-semibold">Other Departments</h4>
-                  <div className="space-y-1 text-sm">
-                    <p>Sales: 1-800-SALES</p>
-                    <p>Billing: 1-800-BILLING</p>
-                    <p>Technical: 1-800-TECH</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+            )}
           </div>
-
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>Office Locations</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <h4 className="font-semibold mb-2">Headquarters</h4>
-                  <p className="text-sm text-gray-600">
-                    123 Business Ave<br />
-                    New York, NY 10001<br />
-                    United States
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-2">West Coast Office</h4>
-                  <p className="text-sm text-gray-600">
-                    456 Tech Blvd<br />
-                    San Francisco, CA 94105<br />
-                    United States
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-2">European Office</h4>
-                  <p className="text-sm text-gray-600">
-                    789 Innovation St<br />
-                    London, EC1A 1BB<br />
-                    United Kingdom
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="live">
-          <Card>
-            <CardContent className="text-center py-12">
-              <MessageCircle className="w-16 h-16 text-blue-500 mx-auto mb-4" />
-              <h3 className="text-2xl font-bold mb-2">Live Chat Support</h3>
-              <p className="text-gray-600 mb-6">Get instant help from our support team</p>
-              
-              <div className="max-w-md mx-auto space-y-4">
-                <div className="p-4 bg-green-50 rounded-lg">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="font-semibold text-green-800">Available Now</span>
-                  </div>
-                  <p className="text-sm text-green-700">Average wait time: Less than 2 minutes</p>
-                </div>
-                
-                <Button size="lg" className="w-full">
-                  <MessageCircle className="w-5 h-5 mr-2" />
-                  Start Live Chat
-                </Button>
-                
-                <div className="text-sm text-gray-500">
-                  <p>Chat hours: Monday - Friday, 9AM - 8PM EST</p>
-                  <p>Weekend: 10AM - 6PM EST</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+        </div>
+      )}
     </div>
   );
 }
