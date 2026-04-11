@@ -92,9 +92,9 @@ export default function CheckoutPage() {
       ...prev,
       address: suggestion.display_name,
       city: addr.city || addr.town || addr.village || addr.suburb || '',
-      state: addr.state || '',
+      state: addr.state || addr.county || '',
       zip_code: addr.postcode || '',
-      country: addr.country || ''
+      country: addr.country_code ? countries.find(c => c.code === addr.country_code)?.name || addr.country : addr.country || ''
     }));
     setShowSuggestions(false);
     setAddressSuggestions([]);
@@ -174,6 +174,42 @@ export default function CheckoutPage() {
   };
 
   const sendOtp = async () => {
+    // Validate all required fields before sending OTP
+    if (!shippingInfo.full_name.trim()) {
+      setError('Full Name is required');
+      return;
+    }
+    if (!shippingInfo.email.trim() || !/^\S+@\S+\.\S+$/.test(shippingInfo.email)) {
+      setError('Valid Email is required');
+      return;
+    }
+    if (!shippingInfo.phone.trim() || !/^\+?[\d\s-]{8,15}$/.test(shippingInfo.phone.replace(/[\s()-]/g, ''))) {
+      setError('Please enter a valid phone number (minimum 8 digits)');
+      return;
+    }
+    if (!shippingInfo.address.trim()) {
+      setError('Shipping Address is required');
+      return;
+    }
+    if (paymentMethod === 'credit_card') {
+      if (!paymentInfo.cardNumber.trim()) {
+        setError('Card Number is required');
+        return;
+      }
+      if (!paymentInfo.expiryDate.trim()) {
+        setError('Expiry Date is required');
+        return;
+      }
+      if (!paymentInfo.cvv.trim()) {
+        setError('CVV is required');
+        return;
+      }
+    }
+    if (items.length === 0) {
+      setError('Your cart is empty');
+      return;
+    }
+
     setIsLoading(true);
     try {
       const resp = await fetch('/api/checkout/otp/send', {
@@ -386,9 +422,9 @@ export default function CheckoutPage() {
         console.error('Email failed:', emailErr);
       }
 
-      // Clear cart and redirect carefully
+      // Clear cart and redirect to success page
       await clearCart();
-      router.push(`/customer/orders/${order.id}`);
+      router.push(`/customer/checkout/success?orderId=${order.id}&orderNumber=${order.order_number}`);
     } catch (error: any) {
       console.error('Order creation failed:', error);
       setError(`Order placement failed: ${error.message || 'System error'}`);

@@ -65,7 +65,7 @@ export const sendOrderConfirmationEmail = async (order: OrderData) => {
   const html = generateBrandedTemplate(
     'Order Confirmation',
     content,
-    `${process.env.NEXT_PUBLIC_APP_URL}/customer/orders/${order.id}`,
+    `${process.env.NEXT_PUBLIC_SITE_URL}/customer/orders/${order.id}`,
     'View Order Details'
   );
 
@@ -127,7 +127,7 @@ export const sendAdminOrderAlert = async (order: OrderData) => {
   const html = generateBrandedTemplate(
     'New Order Received',
     content,
-    `${process.env.NEXT_PUBLIC_APP_URL}/admin/orders/${order.id}`,
+    `${process.env.NEXT_PUBLIC_SITE_URL}/admin/orders/${order.id}`,
     'Process Order in Admin Panel'
   );
 
@@ -206,7 +206,7 @@ export const sendOrderStatusUpdate = async (
   const html = generateBrandedTemplate(
     title,
     content,
-    `${process.env.NEXT_PUBLIC_APP_URL}/customer/orders/${orderId}`,
+    `${process.env.NEXT_PUBLIC_SITE_URL}/customer/orders/${orderId}`,
     'View Order'
   );
 
@@ -233,7 +233,7 @@ export const sendOrderStatusUpdate = async (
     const adminHtml = generateBrandedTemplate(
       `Order ${status.charAt(0).toUpperCase() + status.slice(1)} Alert`,
       adminContent,
-      `${process.env.NEXT_PUBLIC_APP_URL}/admin/orders/${orderId}`,
+      `${process.env.NEXT_PUBLIC_SITE_URL}/admin/orders/${orderId}`,
       'View in Admin Panel'
     );
 

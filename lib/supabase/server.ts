@@ -35,16 +35,16 @@ export async function createClient() {
 }
 
 export async function createAdminClient() {
-  // Try multiple possible environment variable names for the service role key
+  // This project uses new Supabase key format — prefer SECRET_API_KEY (sb_secret_...)
   const key = (
-    process.env.SUPABASE_SERVICE_ROLE_KEY || 
-    process.env.SERVICE_ROLE || 
-    process.env.SECRET_API_KEY || 
+    process.env.SECRET_API_KEY ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SERVICE_ROLE ||
     ''
   ).trim();
-  
+
   const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim();
-  
+
   return createSupabaseClient(url, key, {
     auth: {
       autoRefreshToken: false,

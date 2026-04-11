@@ -39,14 +39,32 @@ export async function GET(
       console.warn('Profile not found for invoice, continuing with order data:', profileError);
     }
 
+    const formatAddress = (addr: any) => {
+      if (!addr) return '';
+      if (typeof addr === 'string') return addr;
+      const parts = [
+        addr.full_name || addr.fullName,
+        addr.address,
+        [addr.city, addr.state].filter(Boolean).join(', '),
+        addr.zip_code || addr.postal_code || addr.postalCode,
+        addr.country,
+      ].filter(Boolean);
+      return parts.join('\n');
+    };
+
     // 3. Prepare Invoice Data
     const invoiceData = {
       orderNumber: order.order_number || order.id.slice(0, 8).toUpperCase(),
       date: new Date(order.created_at).toLocaleDateString(),
       customerName: profile?.company_name || profile?.full_name || order.shipping_address?.full_name || 'Valued Customer',
       customerEmail: profile?.email || order.shipping_address?.email || 'N/A',
+      customerPhone: order.shipping_address?.phone || '',
+      billingAddress: formatAddress(order.billing_address || order.shipping_address),
+      shippingAddress: formatAddress(order.shipping_address),
+      paymentMethod: order.payment_method || '',
       items: order.order_items.map((item: any) => ({
         name: item.products?.name || 'Product',
+        sku: item.products?.sku || undefined,
         quantity: item.quantity,
         price: Number(item.unit_price),
         total: Number(item.quantity * item.unit_price)

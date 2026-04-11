@@ -38,7 +38,7 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
   const router = useRouter();
   const supabase = createClient();
   const isEditing = !!productId;
-  
+
   // Basic Information
   const [title, setTitle] = useState(initialData?.title || '');
   const [name, setName] = useState(initialData?.name || '');
@@ -49,14 +49,14 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
   const [brand, setBrand] = useState(initialData?.brand || '');
   const [manufacturer, setManufacturer] = useState(initialData?.manufacturer || '');
   const [modelNumber, setModelNumber] = useState(initialData?.model_number || '');
-  
+
   // Pricing
   const [price, setPrice] = useState(initialData?.price?.toString() || '');
   const [compareAtPrice, setCompareAtPrice] = useState(initialData?.compare_at_price?.toString() || '');
   const [costPrice, setCostPrice] = useState(initialData?.cost_price?.toString() || '');
   const [taxRate, setTaxRate] = useState(initialData?.tax_rate?.toString() || '0.0000');
   const [shippingCost, setShippingCost] = useState(initialData?.shipping_cost?.toString() || '0');
-  
+
   // Inventory
   const [stockQuantity, setStockQuantity] = useState(initialData?.stock_quantity?.toString() || '0');
   const [stockStatus, setStockStatus] = useState(initialData?.stock_status || 'in_stock');
@@ -65,7 +65,7 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
   const [allowBackorder, setAllowBackorder] = useState(!!initialData?.allow_backorder);
   const [reorderPoint, setReorderPoint] = useState(initialData?.reorder_point?.toString() || '20');
   const [reorderQuantity, setReorderQuantity] = useState(initialData?.reorder_quantity?.toString() || '50');
-  
+
   // Shipping & Delivery
   const [weight, setWeight] = useState(initialData?.weight?.toString() || '');
   const [dimensions, setDimensions] = useState(initialData?.dimensions || '');
@@ -74,7 +74,7 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
   const [shippingMethod, setShippingMethod] = useState(initialData?.shipping_method || 'standard');
   const [freeShipping, setFreeShipping] = useState(!!initialData?.free_shipping);
   const [freeShippingThreshold, setFreeShippingThreshold] = useState(initialData?.free_shipping_threshold?.toString() || '');
-  
+
   // Product Settings
   const [isActive, setIsActive] = useState(initialData?.is_active !== false);
   const [isFeatured, setIsFeatured] = useState(!!initialData?.is_featured);
@@ -82,12 +82,12 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
   const [requiresPrescription, setRequiresPrescription] = useState(!!initialData?.requires_prescription);
   const [minOrderQuantity, setMinOrderQuantity] = useState(initialData?.min_order_quantity?.toString() || '1');
   const [maxOrderQuantity, setMaxOrderQuantity] = useState(initialData?.max_order_quantity?.toString() || '');
-  
+
   // Categories
   const [availableCategories, setAvailableCategories] = useState<Category[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(initialData?.selected_categories || []);
   const [primaryCategory, setPrimaryCategory] = useState(initialData?.primary_category || '');
-  
+
   // Tags & SEO
   const [tags, setTags] = useState<string[]>(initialData?.tags || []);
   const [currentTag, setCurrentTag] = useState('');
@@ -95,7 +95,7 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
   const [metaDescription, setMetaDescription] = useState(initialData?.meta_description || '');
   const [metaKeywords, setMetaKeywords] = useState<string[]>(initialData?.meta_keywords || []);
   const [currentKeyword, setCurrentKeyword] = useState('');
-  
+
   // Medical Specific
   const [returnPolicy, setReturnPolicy] = useState(initialData?.return_policy || '30-day return policy');
   const [warranty, setWarranty] = useState(initialData?.warranty || '');
@@ -109,14 +109,14 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
   const [batchNumber, setBatchNumber] = useState(initialData?.batch_number || '');
   const [supplier, setSupplier] = useState(initialData?.supplier || '');
   const [supplierSku, setSupplierSku] = useState(initialData?.supplier_sku || '');
-  
+
   // Images
   const [images, setImages] = useState<ProductImage[]>(initialData?.images || []);
-  
+
   // Admin
   const [adminNotes, setAdminNotes] = useState(initialData?.admin_notes || '');
   const [internalCode, setInternalCode] = useState(initialData?.internal_code || '');
-  
+
   // Loading states
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -134,7 +134,7 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
       .select('*')
       .eq('is_active', true)
       .order('name', { ascending: true });
-    
+
     if (error) {
       console.error('Error fetching categories:', error);
     } else {
@@ -209,9 +209,9 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
       setSupplierSku(product.supplier_sku || '');
       setAdminNotes(product.admin_notes || '');
       setInternalCode(product.internal_code || '');
-      
+
       setImages(product.product_images || []);
-      
+
       const cats = product.product_categories || [];
       setSelectedCategories(cats.map((c: any) => c.category_id));
       const primary = cats.find((c: any) => c.is_primary);
@@ -267,66 +267,18 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
 
     try {
       const productData: any = {
-        title: title || name,
-        name: name || title,
-        short_description: shortDescription,
-        long_description: longDescription,
-        description: shortDescription || longDescription,
+        name: title || name,
+        description: longDescription || shortDescription,
         sku,
-        barcode,
-        brand,
-        manufacturer,
-        model_number: modelNumber,
         price: parseFloat(price) || 0,
-        compare_at_price: compareAtPrice ? parseFloat(compareAtPrice) : null,
-        cost_price: costPrice ? parseFloat(costPrice) : null,
-        tax_rate: parseFloat(taxRate) || 0,
-        shipping_cost: parseFloat(shippingCost) || 0,
         stock_quantity: parseInt(stockQuantity) || 0,
-        stock_status: stockStatus,
-        low_stock_threshold: parseInt(lowStockThreshold) || 10,
-        track_inventory: trackInventory,
-        allow_backorder: allowBackorder,
-        reorder_point: parseInt(reorderPoint) || 20,
-        reorder_quantity: parseInt(reorderQuantity) || 50,
-        weight: weight ? parseFloat(weight) : null,
-        dimensions,
-        estimated_delivery_days: parseInt(estimatedDeliveryDays) || 3,
-        estimated_delivery_text: estimatedDeliveryText,
-        shipping_method: shippingMethod,
-        free_shipping: freeShipping,
-        free_shipping_threshold: freeShippingThreshold ? parseFloat(freeShippingThreshold) : null,
-        active: isActive,
-        is_active: isActive,
+        category_id: selectedCategories.length > 0 ? (primaryCategory || selectedCategories[0]) : null,
+        image_url: images.length > 0 ? (images.find(img => img.is_thumbnail)?.url || images[0].url) : null,
+        in_stock: (parseInt(stockQuantity) || 0) > 0 || stockStatus === 'in_stock',
         featured: isFeatured,
-        is_featured: isFeatured,
-        is_digital: isDigital,
-        requires_prescription: requiresPrescription,
-        min_order_quantity: parseInt(minOrderQuantity) || 1,
-        max_order_quantity: maxOrderQuantity ? parseInt(maxOrderQuantity) : null,
-        tags,
-        meta_title: metaTitle,
-        meta_description: metaDescription,
-        meta_keywords: metaKeywords,
-        return_policy: returnPolicy,
-        warranty,
-        safety_warnings: safetyWarnings,
-        directions,
-        ingredients,
-        allergens,
-        storage_instructions,
-        expiration_date: expirationDate || null,
-        batch_number: batchNumber,
-        supplier,
-        supplier_sku: supplierSku,
-        admin_notes: adminNotes,
-        internal_code: internalCode,
+        active: isActive,
         updated_at: new Date().toISOString()
       };
-
-      if (!isEditing) {
-        productData.created_by = (await supabase.auth.getUser()).data.user?.id;
-      }
 
       let product;
       if (isEditing) {
@@ -370,7 +322,7 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
           is_thumbnail: img.is_thumbnail
         }));
         await supabase.from('product_images').insert(imageData);
-        
+
         // Update main product image_url with thumbnail
         const thumb = images.find(img => img.is_thumbnail) || images[0];
         if (thumb) {
@@ -425,7 +377,7 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
             <div className="p-6">
               <TabsContent value="basic" className="mt-0 space-y-6">
                 <div className="space-y-4">
-                   <div>
+                  <div>
                     <Label htmlFor="title">Product Title *</Label>
                     <Input id="title" value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Paracetamol 500mg Tablets" required className="mt-1" />
                   </div>
@@ -507,8 +459,8 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
                       {images.map((img, idx) => (
                         <div key={idx} className="relative border rounded-xl p-4 bg-gray-50/50 group transition-all hover:shadow-md hover:border-blue-200">
-                          <ImageUploader 
-                            value={img.url} 
+                          <ImageUploader
+                            value={img.url}
                             onChange={(url) => updateImage(idx, 'url', url)}
                             label={`Image ${idx + 1}`}
                             bucket="product-images"
@@ -516,10 +468,10 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
                           />
                           <div className="mt-4 flex items-center justify-between border-t pt-4">
                             <div className="flex items-center gap-2">
-                              <Checkbox 
+                              <Checkbox
                                 id={`thumb-${idx}`}
-                                checked={img.is_thumbnail} 
-                                onCheckedChange={v => updateImage(idx, 'is_thumbnail', !!v)} 
+                                checked={img.is_thumbnail}
+                                onCheckedChange={v => updateImage(idx, 'is_thumbnail', !!v)}
                               />
                               <Label htmlFor={`thumb-${idx}`} className="text-xs font-medium cursor-pointer">Main Thumbnail</Label>
                             </div>
@@ -529,10 +481,10 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
                           </div>
                         </div>
                       ))}
-                      <Button 
-                        variant="outline" 
-                        type="button" 
-                        onClick={addImage} 
+                      <Button
+                        variant="outline"
+                        type="button"
+                        onClick={addImage}
                         className="h-[280px] border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-3 transition-all hover:border-blue-400 hover:bg-blue-50 group"
                       >
                         <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
@@ -576,9 +528,9 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
               <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
                 {availableCategories.map(cat => (
                   <div key={cat.id} className="flex items-center gap-2">
-                    <Checkbox 
-                      id={`cat-${cat.id}`} 
-                      checked={selectedCategories.includes(cat.id)} 
+                    <Checkbox
+                      id={`cat-${cat.id}`}
+                      checked={selectedCategories.includes(cat.id)}
                       onCheckedChange={v => {
                         if (v) {
                           setSelectedCategories([...selectedCategories, cat.id]);
@@ -586,7 +538,7 @@ export default function ProductForm({ productId, initialData }: ProductFormProps
                         } else {
                           setSelectedCategories(selectedCategories.filter(id => id !== cat.id));
                         }
-                      }} 
+                      }}
                     />
                     <Label htmlFor={`cat-${cat.id}`} className="text-sm">{cat.name}</Label>
                   </div>

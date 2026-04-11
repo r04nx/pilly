@@ -56,8 +56,8 @@ export default function AdminOrdersPage() {
       const q = searchQuery.toLowerCase();
       f = f.filter(o =>
         o.order_number?.toLowerCase().includes(q) ||
-        o.profiles?.full_name?.toLowerCase().includes(q) ||
-        o.profiles?.email?.toLowerCase().includes(q)
+        o.shipping_address?.full_name?.toLowerCase().includes(q) ||
+        o.shipping_address?.email?.toLowerCase().includes(q)
       );
     }
     setFiltered(f);
@@ -71,16 +71,17 @@ export default function AdminOrdersPage() {
 
   const fetchOrders = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*, profiles(full_name, email, phone, company_name, city), order_items(*, product:products(name, sku, image_url))')
-      .order('created_at', { ascending: false });
-    
-    if (error) {
+    try {
+      const res = await fetch('/api/admin/orders');
+      if (!res.ok) throw new Error('Failed to fetch orders');
+      const { orders: data } = await res.json();
+      setOrders(data || []);
+    } catch (error) {
       console.error('Error fetching admin orders:', error);
+      setOrders([]);
+    } finally {
+      setLoading(false);
     }
-    setOrders(data || []);
-    setLoading(false);
   };
 
   const updateStatus = async (orderId: string, status: string) => {
@@ -104,15 +105,15 @@ export default function AdminOrdersPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           status: emailType,
-          customerEmail: order.profiles?.email,
+          customerEmail: order.shipping_address?.email,
           customMessage: emailMessage,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      setSendResult({ ok: true, msg: `Branded email sent to ${order.profiles?.email}` });
+      setSendResult({ ok: true, msg: `Branded email sent to ${order.shipping_address?.email}` });
       setEmailMessage('');
-      
+
       // Update local order status if it changed
       setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: emailType } : o));
     } catch (e: any) {
@@ -143,7 +144,7 @@ export default function AdminOrdersPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {['pending','confirmed','shipped','delivered'].map(s => (
+        {['pending', 'confirmed', 'shipped', 'delivered'].map(s => (
           <button key={s} onClick={() => setStatusFilter(statusFilter === s ? 'all' : s)}
             className={`bg-white border rounded-xl p-4 text-left hover:shadow-md transition-all ${statusFilter === s ? 'border-sky-400 ring-2 ring-sky-100' : 'border-gray-200'}`}>
             <p className="text-xs font-bold uppercase text-gray-400 tracking-wider">{s}</p>
@@ -168,8 +169,8 @@ export default function AdminOrdersPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
-            {['pending','confirmed','processing','shipped','delivered','cancelled'].map(s => (
-              <SelectItem key={s} value={s}>{s.charAt(0).toUpperCase()+s.slice(1)}</SelectItem>
+            {['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'].map(s => (
+              <SelectItem key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -198,13 +199,13 @@ export default function AdminOrdersPage() {
               ) : paginatedOrders.map(order => (
                 <tr key={order.id} className="hover:bg-sky-50/30 transition-colors">
                   <td className="px-4 py-3">
-                    <p className="font-bold text-sky-700 text-xs font-mono">{order.order_number || order.id.slice(0,8).toUpperCase()}</p>
+                    <p className="font-bold text-sky-700 text-xs font-mono">{order.order_number || order.id.slice(0, 8).toUpperCase()}</p>
                     <p className="text-xs text-gray-400">{new Date(order.created_at).toLocaleDateString('en-CA')}</p>
                   </td>
                   <td className="px-4 py-3">
-                    <p className="font-semibold text-gray-900 text-sm">{order.profiles?.full_name || 'Unknown'}</p>
-                    <p className="text-xs text-gray-400">{order.profiles?.email}</p>
-                    {order.profiles?.company_name && <p className="text-xs text-sky-500">{order.profiles.company_name}</p>}
+                    <p className="font-semibold text-gray-900 text-sm">{order.shipping_address?.full_name || 'Unknown'}</p>
+                    <p className="text-xs text-gray-400">{order.shipping_address?.email}</p>
+                    {order.shipping_address?.city && <p className="text-xs text-sky-500">{order.shipping_address.city}</p>}
                   </td>
                   <td className="px-4 py-3">
                     <span className="text-xs text-gray-500 font-medium">
@@ -221,8 +222,8 @@ export default function AdminOrdersPage() {
                         {updatingStatus === order.id && <span className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin ml-1" />}
                       </SelectTrigger>
                       <SelectContent>
-                        {['pending','confirmed','processing','shipped','delivered','cancelled'].map(s => (
-                          <SelectItem key={s} value={s}>{s.charAt(0).toUpperCase()+s.slice(1)}</SelectItem>
+                        {['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'].map(s => (
+                          <SelectItem key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -263,13 +264,13 @@ export default function AdminOrdersPage() {
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <p className="text-sky-100 text-xs font-medium">ORDER DETAILS</p>
-                  <h2 className="text-white text-xl font-bold">{selectedOrder.order_number || selectedOrder.id.slice(0,8).toUpperCase()}</h2>
+                  <h2 className="text-white text-xl font-bold">{selectedOrder.order_number || selectedOrder.id.slice(0, 8).toUpperCase()}</h2>
                   <p className="text-sky-200 text-sm">{new Date(selectedOrder.created_at).toLocaleString('en-CA')}</p>
                 </div>
                 <div className="flex gap-2">
-                  <Button 
-                    variant="secondary" 
-                    size="sm" 
+                  <Button
+                    variant="secondary"
+                    size="sm"
                     className="bg-white/10 hover:bg-white/20 text-white border-none h-8"
                     onClick={() => window.open(`/api/invoice/${selectedOrder.id}`, '_blank')}
                   >
@@ -285,11 +286,10 @@ export default function AdminOrdersPage() {
               <div className="bg-sky-50 border border-sky-100 rounded-xl p-4">
                 <h3 className="font-bold text-gray-800 text-sm mb-3">Customer Information</h3>
                 <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div><span className="text-gray-400 text-xs">Name</span><p className="font-semibold">{selectedOrder.profiles?.full_name || '—'}</p></div>
-                  <div><span className="text-gray-400 text-xs">Company</span><p className="font-semibold">{selectedOrder.profiles?.company_name || '—'}</p></div>
-                  <div><span className="text-gray-400 text-xs">Email</span><p className="font-semibold text-sky-600">{selectedOrder.profiles?.email || '—'}</p></div>
-                  <div><span className="text-gray-400 text-xs">Phone</span><p className="font-semibold">{selectedOrder.profiles?.phone || '—'}</p></div>
-                  <div><span className="text-gray-400 text-xs">City</span><p className="font-semibold">{selectedOrder.profiles?.city || '—'}</p></div>
+                  <div><span className="text-gray-400 text-xs">Name</span><p className="font-semibold">{selectedOrder.shipping_address?.full_name || '—'}</p></div>
+                  <div><span className="text-gray-400 text-xs">Email</span><p className="font-semibold text-sky-600">{selectedOrder.shipping_address?.email || '—'}</p></div>
+                  <div><span className="text-gray-400 text-xs">Phone</span><p className="font-semibold">{selectedOrder.shipping_address?.phone || '—'}</p></div>
+                  <div><span className="text-gray-400 text-xs">City</span><p className="font-semibold">{selectedOrder.shipping_address?.city || '—'}</p></div>
                   <div><span className="text-gray-400 text-xs">Status</span>
                     <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-bold border ${STATUS_COLORS[selectedOrder.status]}`}>
                       {selectedOrder.status}

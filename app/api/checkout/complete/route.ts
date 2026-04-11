@@ -10,11 +10,11 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = await createClient();
-    
-    // Fetch order details
+
+    // Fetch order + items (no FK join to profiles)
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .select('*, profiles(full_name, email, company_name), order_items(*, product:products(name))')
+      .select(`*, order_items(*, product:products(name))`)
       .eq('id', orderId)
       .single();
 
@@ -22,12 +22,23 @@ export async function POST(req: NextRequest) {
       throw new Error(orderError?.message || 'Order not found');
     }
 
-    // Format for email service
+    // Fetch profile separately (if user is logged in)
+    let profile: any = null;
+    if (order.user_id) {
+      const { data } = await supabase
+        .from('profiles')
+        .select('full_name, email, company_name')
+        .eq('id', order.user_id)
+        .single();
+      profile = data;
+    }
+
+    // Format for email service — fall back to shipping_address for guest orders
     const orderData = {
       id: order.id,
       order_number: order.order_number,
-      customer_email: order.profiles?.email || order.shipping_address?.email,
-      customer_name: order.profiles?.company_name || order.profiles?.full_name || order.shipping_address?.fullName,
+      customer_email: profile?.email || order.shipping_address?.email,
+      customer_name: profile?.company_name || profile?.full_name || order.shipping_address?.full_name,
       items: order.order_items.map((item: any) => ({
         product_name: item.product?.name || 'Product',
         quantity: item.quantity,

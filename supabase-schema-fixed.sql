@@ -627,3 +627,24 @@ INSERT INTO faqs (question, answer, category, helpful) VALUES
 ('How do I contact customer support?', 'You can reach our customer support team through the Support page, by email at support@paraspharmacy.com, or by phone at 1-800-PHARMACY during business hours (9 AM - 6 PM EST).', 'account', 67),
 ('Do you offer prescription services?', 'Yes, we work with licensed pharmacists and can fill valid prescriptions. Please upload your prescription through our secure portal or bring it to our store.', 'services', 73),
 ('What are your business hours?', 'Our stores are open Monday-Friday 9 AM - 8 PM, Saturday 10 AM - 6 PM, and Sunday 11 AM - 5 PM. Our online store is available 24/7 for ordering.', 'general', 29);
+
+-- ==============================================================================
+-- ADDED ADMIN POLICIES FOR ORDER DATA VISIBILITY
+-- ==============================================================================
+CREATE POLICY "Admins can view all profiles" ON profiles
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM profiles AS p 
+            WHERE p.id = auth.uid() 
+            AND p.is_admin = true
+        )
+    );
+
+CREATE POLICY "Admins can view all order items" ON order_items
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM profiles 
+            WHERE profiles.id = auth.uid() 
+            AND profiles.is_admin = true
+        )
+    );

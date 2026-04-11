@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { createClient } from '@/lib/supabase/client';
 import { Pilly } from '@/components/pilly';
 import { CartBadge } from '@/components/cart-badge';
+import { GlobalSearch } from '@/components/store/global-search';
 import {
   Package,
   ShoppingCart,
@@ -32,7 +33,8 @@ import {
   FlaskConical,
   Container,
   Tag,
-  TestTube
+  TestTube,
+  Check
 } from 'lucide-react';
 
 export default function Home() {
@@ -63,14 +65,14 @@ export default function Home() {
           data: { user },
         } = await supabase.auth.getUser();
         setUser(user);
-        
+
         if (user) {
           const { data: profile } = await supabase
             .from('profiles')
             .select('is_admin')
             .eq('id', user.id)
             .single();
-          
+
           if (profile?.is_admin || user.user_metadata?.is_admin) {
             setIsAdmin(true);
           }
@@ -94,7 +96,7 @@ export default function Home() {
           .eq('is_active', true)
           .order('sort_order', { ascending: true })
           .order('name', { ascending: true });
-        
+
         if (error) throw error;
         setCategories(data || []);
       } catch (error) {
@@ -116,7 +118,7 @@ export default function Home() {
           .eq('active', true)
           .eq('featured', true)
           .limit(8);
-        
+
         if (error) throw error;
         setFeaturedProducts(data || []);
       } catch (error) {
@@ -175,19 +177,7 @@ export default function Home() {
             <Link href="#ordering" className="text-sm font-medium px-4 py-2 rounded-full hover:bg-background hover:shadow-sm hover:text-primary transition-all">How it works</Link>
           </div>
 
-          {/* Desktop search */}
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              const formData = new FormData(e.currentTarget);
-              const query = formData.get('query');
-              if (query) router.push(`/products?search=${encodeURIComponent(query.toString())}`);
-            }}
-            className="hidden lg:flex items-center relative"
-          >
-            <Search className="w-4 h-4 absolute left-3 text-muted-foreground" />
-            <input name="query" type="search" placeholder="Search products..." className="h-9 pl-9 pr-4 rounded-full bg-muted/50 border border-border/50 text-sm outline-none focus:bg-background focus:ring-2 focus:ring-primary/20 transition-all w-56 shadow-inner" />
-          </form>
+          <GlobalSearch className="hidden lg:flex flex-1 max-w-sm mx-8" />
 
           {/* Right side */}
           <div className="flex items-center gap-2">
@@ -224,11 +214,7 @@ export default function Home() {
         {/* Mobile dropdown menu */}
         {mobileMenuOpen && (
           <div className="md:hidden absolute left-0 right-0 bg-background/95 backdrop-blur-xl border-b border-border shadow-xl z-50 px-4 py-4 flex flex-col gap-3 animate-in slide-in-from-top-2 duration-200">
-            {/* Mobile search */}
-            <form onSubmit={(e) => { e.preventDefault(); const q = new FormData(e.currentTarget).get('q'); if (q) { router.push(`/products?search=${encodeURIComponent(q.toString())}`); setMobileMenuOpen(false); } }} className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <input name="q" type="search" placeholder="Search products..." className="w-full h-10 pl-10 pr-4 rounded-full bg-muted border border-border/50 text-sm outline-none focus:ring-2 focus:ring-primary/20" />
-            </form>
+            <GlobalSearch className="w-full" />
             {/* Nav links */}
             <div className="flex flex-col gap-1">
               <Link href="/products" onClick={() => setMobileMenuOpen(false)} className="px-4 py-2.5 rounded-xl hover:bg-muted font-medium text-sm">Products</Link>
@@ -337,83 +323,31 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="relative lg:ml-auto w-full max-w-md perspective-[1000px] mt-12 lg:mt-0 z-30 pointer-events-auto">
-              {/* Floating Cards Container */}
-              <div className="relative w-full aspect-square transform-style-3d rotate-y-[-5deg] rotate-x-[5deg] group/card">
+            <div className="relative lg:ml-auto w-full max-w-lg mt-12 lg:mt-0 z-30 pointer-events-auto group">
+              {/* Main Landing Page Hero Image */}
+              <div className="relative w-full aspect-square flex items-center justify-center p-4">
+                {/* Glow Background */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-sky-400/20 blur-[100px] rounded-full opacity-50 group-hover:opacity-70 transition-opacity duration-1000"></div>
 
-                {/* Main Card */}
-                <div className="absolute inset-0 bg-background/80 backdrop-blur-2xl border border-white/20 dark:border-white/10 rounded-[2.5rem] shadow-[0_35px_60px_-15px_rgba(0,0,0,0.1)] overflow-hidden flex flex-col transform group-hover/card:translate-z-10 group-hover/card:-translate-y-2 transition-all duration-500 will-change-transform z-10 cursor-pointer">
-                  <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-primary via-accent to-primary"></div>
-                  <div className="p-8 border-b border-border/50 bg-gradient-to-b from-primary/10 to-transparent flex items-center justify-between">
-                    <div className="flex items-center gap-5">
-                      <div className="w-16 h-16 rounded-2xl bg-white dark:bg-black shadow-inner border border-border/50 flex items-center justify-center text-primary group-hover/card:scale-110 transition-transform">
-                        {featuredProducts[0]?.image_url ? (
-                          <img src={featuredProducts[0].image_url} alt="" className="w-full h-full object-cover rounded-xl" />
-                        ) : (
-                          <Package className="w-8 h-8 drop-shadow-sm" />
-                        )}
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-xl text-foreground truncate max-w-[180px]">
-                          {featuredProducts[0]?.name || "Premium Packaging"}
-                        </h3>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                          </span>
-                          <p className="text-sm font-semibold text-green-600 dark:text-green-400">
-                            {featuredProducts[0]?.stock_quantity > 0 ? 'In Stock Now' : 'Limited Supply'}
-                          </p>
-                        </div>
-                      </div>
+                <div className="relative bg-white/50 backdrop-blur-3xl border border-white/20 dark:border-white/10 rounded-[3rem] p-4 shadow-2xl group-hover:shadow-sky-200/20 transition-all duration-700 hover:rotate-2 hover:scale-[1.02] overflow-hidden">
+                  <img
+                    src="https://flem.xo.je/uploads/brand-logo_2e73a483.png"
+                    alt="Pharmacy Supplies Portfolio"
+                    className="w-full h-full object-cover rounded-[2.5rem] drop-shadow-[0_20px_50px_rgba(0,0,0,0.15)] group-hover:scale-105 transition-transform duration-1000"
+                  />
+
+                  {/* Floating Detail Overlays to add depth */}
+                  <div className="absolute top-8 left-8 p-3 rounded-2xl bg-white/80 backdrop-blur-md border border-white/50 shadow-lg group-hover:-translate-y-2 transition-transform duration-500 delay-100">
+                    <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                      <Check className="w-5 h-5" />
                     </div>
                   </div>
-                  <div className="p-8 flex-1 flex flex-col justify-center space-y-8 bg-background/50 group-hover/card:bg-primary/5 transition-colors duration-500">
-                    <div className="space-y-4">
-                      <div className="h-2.5 w-1/3 bg-muted-foreground/20 rounded-full"></div>
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {featuredProducts[0]?.description || "High-quality pharmaceutical compliance packaging solutions."}
-                      </p>
-                      <div className="h-2.5 w-4/5 bg-muted-foreground/20 rounded-full group-hover/card:bg-primary/20 transition-colors"></div>
-                    </div>
-                    <div className="flex gap-4 w-full pt-4 border-t border-border/30">
-                      <div className="h-12 w-1/3 bg-muted rounded-xl flex items-center justify-center text-foreground font-bold italic">
-                        ${featuredProducts[0]?.price || '0.00'}
-                      </div>
-                      <Link href="/products" className="flex-1">
-                        <button className="h-12 w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl flex items-center justify-center font-bold shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all text-sm cursor-pointer">View Product</button>
-                      </Link>
-                    </div>
+
+                  <div className="absolute bottom-10 right-10 p-4 rounded-2xl bg-white/80 backdrop-blur-md border border-white/50 shadow-lg group-hover:translate-x-2 transition-transform duration-500 delay-200">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Approved</p>
+                    <p className="text-xs font-black text-slate-900">Health Canada</p>
                   </div>
                 </div>
-
-                {/* Floating Element 1 - Top Left */}
-                <div className="absolute -left-12 top-25 w-48 p-4 bg-background border border-white/20 dark:border-white/10 rounded-2xl shadow-xl transform group-hover/card:translate-z-20 group-hover/card:-translate-y-4 transition-all duration-500 z-20 hidden sm:block cursor-default">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center text-green-500 shadow-inner">
-                      <Shield className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider mb-0.5">Compliance</p>
-                      <p className="text-sm font-bold text-foreground">100% Ready</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Floating Element 2 - Bottom Right */}
-                <div className="absolute -right-8 top-100 w-52 p-4 bg-background border border-white/20 dark:border-white/10 rounded-2xl shadow-xl transform group-hover/card:translate-z-30 group-hover/card:-translate-y-4 group-hover/card:translate-x-4 transition-all duration-500 z-30 hidden sm:block delay-75 cursor-default">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500 shadow-inner group-hover/card:scale-110 transition-transform">
-                      <Leaf className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider mb-0.5">Materials</p>
-                      <p className="text-sm font-bold text-foreground">Eco-Friendly</p>
-                    </div>
-                  </div>
-                </div>
-
               </div>
             </div>
           </div>
@@ -512,24 +446,24 @@ export default function Home() {
             const BASE = 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis';
             const getCategoryEmoji = (slug: string, name: string): string => {
               const key = (slug + ' ' + name).toLowerCase();
-              if (key.includes('bag') || key.includes('pouch'))           return `${BASE}/Objects/Shopping%20Bags.png`;
+              if (key.includes('bag') || key.includes('pouch')) return `${BASE}/Objects/Shopping%20Bags.png`;
               if (key.includes('blister') || key.includes('pack') || key.includes('pill')) return `${BASE}/Objects/Pill.png`;
-              if (key.includes('bottle') || key.includes('lotion'))       return `${BASE}/Objects/Lotion%20Bottle.png`;
+              if (key.includes('bottle') || key.includes('lotion')) return `${BASE}/Objects/Lotion%20Bottle.png`;
               if (key.includes('jar') || key.includes('cream') || key.includes('ointment')) return `${BASE}/Objects/Jar.png`;
               if (key.includes('label') || key.includes('sticker') || key.includes('tag')) return `${BASE}/Objects/Label.png`;
               if (key.includes('vial') || key.includes('ampoule') || key.includes('test')) return `${BASE}/Objects/Test%20Tube.png`;
-              if (key.includes('capsule'))                                return `${BASE}/Objects/Pill.png`;
-              if (key.includes('syringe') || key.includes('inject'))       return `${BASE}/Medical/Syringe.png`;
-              if (key.includes('glove'))                                  return `${BASE}/Objects/Gloves.png`;
-              if (key.includes('mask'))                                   return `${BASE}/Objects/Face%20with%20Medical%20Mask.png`;
+              if (key.includes('capsule')) return `${BASE}/Objects/Pill.png`;
+              if (key.includes('syringe') || key.includes('inject')) return `${BASE}/Medical/Syringe.png`;
+              if (key.includes('glove')) return `${BASE}/Objects/Gloves.png`;
+              if (key.includes('mask')) return `${BASE}/Objects/Face%20with%20Medical%20Mask.png`;
               if (key.includes('drop') || key.includes('eye') || key.includes('ear')) return `${BASE}/Objects/Droplet.png`;
-              if (key.includes('tube') || key.includes('gel'))            return `${BASE}/Objects/Lotion%20Bottle.png`;
-              if (key.includes('strip') || key.includes('tape'))          return `${BASE}/Objects/Adhesive%20Bandage.png`;
-              if (key.includes('box') || key.includes('cardboard'))       return `${BASE}/Objects/Package.png`;
-              if (key.includes('wrap') || key.includes('foil'))           return `${BASE}/Objects/Scroll.png`;
-              if (key.includes('spoon') || key.includes('measure'))       return `${BASE}/Food/Spoon.png`;
-              if (key.includes('cotton') || key.includes('swab'))         return `${BASE}/Objects/Soft%20Ice%20Cream.png`;
-              if (key.includes('spray') || key.includes('aerosol'))       return `${BASE}/Objects/Lotion%20Bottle.png`;
+              if (key.includes('tube') || key.includes('gel')) return `${BASE}/Objects/Lotion%20Bottle.png`;
+              if (key.includes('strip') || key.includes('tape')) return `${BASE}/Objects/Adhesive%20Bandage.png`;
+              if (key.includes('box') || key.includes('cardboard')) return `${BASE}/Objects/Package.png`;
+              if (key.includes('wrap') || key.includes('foil')) return `${BASE}/Objects/Scroll.png`;
+              if (key.includes('spoon') || key.includes('measure')) return `${BASE}/Food/Spoon.png`;
+              if (key.includes('cotton') || key.includes('swab')) return `${BASE}/Objects/Soft%20Ice%20Cream.png`;
+              if (key.includes('spray') || key.includes('aerosol')) return `${BASE}/Objects/Lotion%20Bottle.png`;
               return `${BASE}/Objects/Package.png`; // sensible default
             };
             return null;
@@ -548,20 +482,20 @@ export default function Home() {
                 const BASE = 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis';
                 const getCategoryEmoji = (slug: string, name: string): string => {
                   const key = (slug + ' ' + name).toLowerCase();
-                  if (key.includes('bag') || key.includes('pouch'))           return `${BASE}/Objects/Shopping%20Bags.png`;
+                  if (key.includes('bag') || key.includes('pouch')) return `${BASE}/Objects/Shopping%20Bags.png`;
                   if (key.includes('blister') || key.includes('pack') || key.includes('pill')) return `${BASE}/Objects/Pill.png`;
-                  if (key.includes('bottle') || key.includes('lotion'))       return `${BASE}/Objects/Lotion%20Bottle.png`;
+                  if (key.includes('bottle') || key.includes('lotion')) return `${BASE}/Objects/Lotion%20Bottle.png`;
                   if (key.includes('jar') || key.includes('cream') || key.includes('ointment')) return `${BASE}/Objects/Jar.png`;
                   if (key.includes('label') || key.includes('sticker') || key.includes('tag')) return `${BASE}/Objects/Label.png`;
                   if (key.includes('vial') || key.includes('ampoule') || key.includes('test')) return `${BASE}/Objects/Test%20Tube.png`;
-                  if (key.includes('capsule'))                                return `${BASE}/Objects/Pill.png`;
-                  if (key.includes('syringe') || key.includes('inject'))       return `${BASE}/Medical/Syringe.png`;
-                  if (key.includes('glove'))                                  return `${BASE}/Objects/Gloves.png`;
+                  if (key.includes('capsule')) return `${BASE}/Objects/Pill.png`;
+                  if (key.includes('syringe') || key.includes('inject')) return `${BASE}/Medical/Syringe.png`;
+                  if (key.includes('glove')) return `${BASE}/Objects/Gloves.png`;
                   if (key.includes('drop') || key.includes('eye') || key.includes('ear')) return `${BASE}/Objects/Droplet.png`;
-                  if (key.includes('tube') || key.includes('gel'))            return `${BASE}/Objects/Lotion%20Bottle.png`;
-                  if (key.includes('strip') || key.includes('tape'))          return `${BASE}/Objects/Adhesive%20Bandage.png`;
-                  if (key.includes('box') || key.includes('cardboard'))       return `${BASE}/Objects/Package.png`;
-                  if (key.includes('spray') || key.includes('aerosol'))       return `${BASE}/Objects/Lotion%20Bottle.png`;
+                  if (key.includes('tube') || key.includes('gel')) return `${BASE}/Objects/Lotion%20Bottle.png`;
+                  if (key.includes('strip') || key.includes('tape')) return `${BASE}/Objects/Adhesive%20Bandage.png`;
+                  if (key.includes('box') || key.includes('cardboard')) return `${BASE}/Objects/Package.png`;
+                  if (key.includes('spray') || key.includes('aerosol')) return `${BASE}/Objects/Lotion%20Bottle.png`;
                   return `${BASE}/Objects/Package.png`;
                 };
 
@@ -579,7 +513,7 @@ export default function Home() {
                     <div className="relative bg-background border border-border/50 rounded-2xl p-6 text-center shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden">
                       {/* Subtle gradient bg on hover */}
                       <div className="absolute inset-0 bg-gradient-to-br from-primary/0 via-primary/0 to-primary/0 group-hover:from-primary/5 group-hover:to-accent/5 transition-all duration-500 rounded-2xl" />
-                      
+
                       <div className="relative w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/10 to-accent/5 mx-auto mb-4 flex items-center justify-center group-hover:scale-110 group-hover:shadow-lg transition-all duration-300">
                         <img
                           src={category.image_url || getCategoryEmoji(category.slug || '', category.name || '')}
@@ -637,9 +571,9 @@ export default function Home() {
                 <Link key={product.id} href="/products" className="group">
                   <div className="relative aspect-[4/5] rounded-[2.5rem] overflow-hidden bg-muted border border-border/50 shadow-sm hover:shadow-2xl transition-all duration-500">
                     {product.image_url ? (
-                      <img 
-                        src={product.image_url} 
-                        alt={product.name} 
+                      <img
+                        src={product.image_url}
+                        alt={product.name}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                       />
                     ) : (

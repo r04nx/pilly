@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { ShoppingCart, Package, Ticket, User, LogOut, Menu, X, Search, Sparkles, Phone, Printer, Home } from 'lucide-react';
 import { CartProvider } from '@/contexts/cart-context';
 import CartIcon from '@/components/cart/cart-icon';
+import { GlobalSearch } from '@/components/store/global-search';
 
 export default function CustomerLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -45,10 +46,10 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   };
 
   const navLinks = [
-    { href: '/customer/products', label: 'Products',  icon: Package },
-    { href: '/customer/orders',   label: 'Orders',    icon: ShoppingCart },
-    { href: '/customer/support',  label: 'Support',   icon: Ticket },
-    { href: '/customer/account',  label: 'Account',   icon: User },
+    { href: '/customer/products', label: 'Products', icon: Package },
+    { href: '/customer/orders', label: 'Orders', icon: ShoppingCart },
+    { href: '/customer/support', label: 'Support', icon: Ticket },
+    { href: '/customer/account', label: 'Account', icon: User },
   ];
 
   if (isLoading) {
@@ -102,6 +103,8 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
               ))}
             </div>
 
+            <GlobalSearch className="hidden lg:flex flex-1 max-w-sm mx-4" />
+
             {/* Right controls */}
             <div className="flex items-center gap-2">
               {/* Cart */}
@@ -131,12 +134,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
           {mobileMenuOpen && (
             <div className="md:hidden absolute left-0 right-0 bg-background/97 backdrop-blur-xl border-b border-border shadow-xl z-50 px-4 py-4 flex flex-col gap-3 animate-in slide-in-from-top-2 duration-200">
               {/* Search shortcut */}
-              <button
-                onClick={() => { router.push('/customer/products'); setMobileMenuOpen(false); }}
-                className="w-full flex items-center gap-3 bg-muted rounded-full px-4 h-10 text-sm text-muted-foreground hover:bg-muted/80 transition-colors"
-              >
-                <Search className="w-4 h-4" /> Search products…
-              </button>
+              <GlobalSearch className="w-full" />
               {/* Nav links */}
               <div className="flex flex-col gap-1">
                 <Link href="/" onClick={() => setMobileMenuOpen(false)} className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${pathname === '/' ? 'bg-primary/10 text-primary' : 'hover:bg-muted'}`}>
