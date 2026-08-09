@@ -63,3 +63,9 @@ temp/
 *.njsproj
 *.sln
 *.sw?
+venv/
+.venv/
+.godot/
+__pycache__/
+*.pyc
+*.part
